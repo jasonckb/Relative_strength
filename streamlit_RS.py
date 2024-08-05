@@ -113,7 +113,7 @@ table = ax.table(cellText=table_data, cellLoc='center', loc='center')
 
 # Style the table
 table.auto_set_font_size(False)
-table.set_fontsize(14)
+table.set_fontsize(12)
 table.scale(2, 3)
 
 # Color coding for cells
