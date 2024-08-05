@@ -88,7 +88,7 @@ fig, ax = plt.subplots(figsize=(20, 16))
 ax.axis('off')
 
 # Add title
-ax.text(0.5, 1.05, "Relative Strength Dashboard", fontsize=24, fontweight='bold', ha='center', va='bottom', transform=ax.transAxes)
+ax.text(0.5, 1.02, "Relative Strength Dashboard", fontsize=24, fontweight='bold', ha='center', va='bottom', transform=ax.transAxes)
 
 # Prepare data for the table
 num_symbols = len(dashboard_data)
@@ -110,8 +110,8 @@ table = ax.table(cellText=table_data, cellLoc='center', loc='center')
 
 # Style the table
 table.auto_set_font_size(False)
-table.set_fontsize(16)
-table.scale(2, 3)
+table.set_fontsize(12)
+table.scale(3, 2)
 
 # Color coding for cells
 for (row, col), cell in table.get_celld().items():
