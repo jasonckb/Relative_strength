@@ -63,98 +63,87 @@ def calculate_rsi(data, window=14):
     rsi = 100 - (100 / (1 + rs))
     return rsi
 
+def create_dashboard(data, rs_scores, rsi, date):
+    latest_scores = rs_scores.loc[date].sort_values(ascending=False)
+    latest_rsi = rsi.loc[date]
+
+    dashboard_data = pd.DataFrame({
+        'Symbol': latest_scores.index,
+        'Score': latest_scores.values,
+        'RSI': latest_rsi.values
+    })
+
+    dashboard_data = dashboard_data.sort_values('Score', ascending=False).reset_index(drop=True)
+    dashboard_data['Rank'] = dashboard_data.index + 1
+
+    ndx_score = dashboard_data.loc[dashboard_data['Symbol'] == '^NDX', 'Score'].values[0]
+    gspc_score = dashboard_data.loc[dashboard_data['Symbol'] == '^GSPC', 'Score'].values[0]
+    benchmark_score = max(ndx_score, gspc_score)
+
+    fig, ax = plt.subplots(figsize=(20, 12))
+    ax.axis('off')
+
+    ax.text(0.5, 1.02, f"Relative Strength Dashboard ({date.strftime('%Y-%m-%d')})", fontsize=24, fontweight='bold', ha='center', va='bottom', transform=ax.transAxes)
+
+    num_symbols = len(dashboard_data)
+    rows, columns = 10, 10
+    table_data = [[''] * columns for _ in range(rows)]
+
+    for idx, row in dashboard_data.iterrows():
+        col = idx % columns
+        row_idx = idx // columns
+        symbol = row['Symbol']
+        score = int(row['Score'])
+        rsi = int(row['RSI'])  # Convert RSI to integer
+        table_data[row_idx][col] = f"{symbol}: {score}\nRSI: {rsi}"  # No decimal place for RSI
+
+    table = ax.table(cellText=table_data, cellLoc='center', loc='center')
+    table.auto_set_font_size(True)
+    table.scale(2, 3)
+
+    for (row, col), cell in table.get_celld().items():
+        idx = row * columns + col
+        if idx < num_symbols:
+            symbol = dashboard_data.iloc[idx]['Symbol']
+            score = int(dashboard_data.iloc[idx]['Score'])
+            rsi = int(dashboard_data.iloc[idx]['RSI'])  # Convert RSI to integer
+            
+            if symbol in ['^NDX', '^GSPC']:
+                cell.set_facecolor('yellow')
+            elif score > 10 and score > benchmark_score:
+                cell.set_facecolor('lightgreen')
+            elif score > 0 and score <= benchmark_score:
+                cell.set_facecolor('lightgray')
+            elif score <= 0 and score <= benchmark_score:
+                cell.set_facecolor('lightcoral')
+            else:
+                cell.set_facecolor('white')
+            
+            text_obj = cell.get_text()
+            text_obj.set_text(f"{symbol}: {score}\nRSI: {rsi}")  # No decimal place for RSI
+            if rsi > 75:
+                text_obj.set_color('red')
+            elif rsi < 25:
+                text_obj.set_color('blue')
+            else:
+                text_obj.set_color('black')
+
+    plt.tight_layout()
+    plt.subplots_adjust(top=0.90)
+    return fig
+
 rs_scores = calculate_relative_strength(data, window=window)
 rsi = calculate_rsi(data)
 
-# Get the latest scores and RSI values
-latest_scores = rs_scores.iloc[-1].sort_values(ascending=False)
-latest_rsi = rsi.iloc[-1]
+# Create and display the current day dashboard
+current_date = data.index[-1]
+current_dashboard = create_dashboard(data, rs_scores, rsi, current_date)
+st.pyplot(current_dashboard)
 
-# Create a DataFrame with scores and RSI
-dashboard_data = pd.DataFrame({
-    'Symbol': latest_scores.index,
-    'Score': latest_scores.values,
-    'RSI': latest_rsi.values
-})
-
-# Sort by Score and add Rank
-dashboard_data = dashboard_data.sort_values('Score', ascending=False).reset_index(drop=True)
-dashboard_data['Rank'] = dashboard_data.index + 1
-
-# Get benchmark scores
-ndx_score = dashboard_data.loc[dashboard_data['Symbol'] == '^NDX', 'Score'].values[0]
-gspc_score = dashboard_data.loc[dashboard_data['Symbol'] == '^GSPC', 'Score'].values[0]
-benchmark_score = max(ndx_score, gspc_score)
-
-# Get the latest date from the data
-latest_date = data.index[-1].strftime("%Y-%m-%d")
-
-# Create the dashboard
-fig, ax = plt.subplots(figsize=(20, 13))  # Increased figure height slightly
-ax.axis('off')
-
-# Add title with dynamic date
-title = f"Relative Strength Dashboard ({latest_date})"
-fig.suptitle(title, fontsize=24, fontweight='bold', y=0.95)  # Adjusted title placement
-
-# Prepare data for the table
-num_symbols = len(dashboard_data)
-rows = 10
-columns = 10
-
-table_data = [[''] * columns for _ in range(rows)]
-
-for idx, row in dashboard_data.iterrows():
-    col = idx % columns
-    row_idx = idx // columns
-    symbol = row['Symbol']
-    score = int(row['Score'])
-    rsi = row['RSI']
-    table_data[row_idx][col] = f"{symbol}: {score}\nRSI: {rsi:.1f}"
-
-# Create the table
-table = ax.table(cellText=table_data, cellLoc='center', loc='center')
-
-# Style the table
-table.auto_set_font_size(False)
-table.set_fontsize(9)  # Adjust font size as needed
-table.scale(1.5, 2.5)  # Adjust scale factors to fit the content
-
-# Color coding for cells
-for (row, col), cell in table.get_celld().items():
-    idx = row * columns + col
-    if idx < num_symbols:
-        symbol = dashboard_data.iloc[idx]['Symbol']
-        score = int(dashboard_data.iloc[idx]['Score'])
-        rsi = dashboard_data.iloc[idx]['RSI']
-        
-        # Set cell color based on rules
-        if symbol in ['^NDX', '^GSPC']:
-            cell.set_facecolor('yellow')
-        elif score > 10 and score > benchmark_score:
-            cell.set_facecolor('lightgreen')
-        elif score > 0 and score <= benchmark_score:
-            cell.set_facecolor('lightgray')
-        elif score <= 0 and score <= benchmark_score:
-            cell.set_facecolor('lightcoral')
-        else:
-            cell.set_facecolor('white')  # For any other case
-        
-        # Set text and RSI color
-        text_obj = cell.get_text()
-        text_obj.set_text(f"{symbol}: {score}\nRSI: {rsi:.1f}")
-        if rsi > 75:
-            text_obj.set_color('red')
-        elif rsi < 25:
-            text_obj.set_color('blue')
-        else:
-            text_obj.set_color('black')
-
-# Adjust layout
-plt.tight_layout(rect=[0, 0.03, 1, 0.95])  # Adjust the rect parameter to leave space for title
-
-# Display the dashboard in Streamlit
-st.pyplot(fig)
+# Create and display the previous trading day dashboard
+previous_date = data.index[-2]
+previous_dashboard = create_dashboard(data, rs_scores, rsi, previous_date)
+st.pyplot(previous_dashboard)
 
 
 
