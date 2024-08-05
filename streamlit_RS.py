@@ -24,6 +24,7 @@ symbols = [
 # Sidebar for user input
 st.sidebar.header('User Input')
 window = st.sidebar.number_input('Moving Average Window for Relative Strength', min_value=1, max_value=365, value=200)
+compare_days = st.sidebar.number_input('Compare N days ago', min_value=1, max_value=365, value=1)
 
 # Download data
 @st.cache_data
@@ -83,7 +84,7 @@ def create_dashboard(data, rs_scores, rsi, date):
     fig, ax = plt.subplots(figsize=(12, 17))  # Slightly reduced figure height
     ax.axis('off')
 
-       # Add date information closer to the table
+    # Add date information closer to the table
     ax.text(0.5, 0.98, f"Relative Strength Dashboard ({date.strftime('%Y-%m-%d')})", 
             fontsize=16, fontweight='bold', ha='center', va='bottom', transform=ax.transAxes)
 
@@ -146,7 +147,7 @@ rsi = calculate_rsi(data)
 
 # Create dashboards for current and previous trading days
 current_date = data.index[-1]
-previous_date = data.index[-2]
+previous_date = data.index[-compare_days]  # Use the user input for previous days
 
 # Create two columns for side-by-side display
 col1, col2 = st.columns(2)
@@ -160,6 +161,7 @@ with col1:
 with col2:
     previous_dashboard = create_dashboard(data, rs_scores, rsi, previous_date)
     st.pyplot(previous_dashboard)
+
 
 
 
