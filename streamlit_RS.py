@@ -80,7 +80,7 @@ def create_dashboard(data, rs_scores, rsi, date):
     gspc_score = dashboard_data.loc[dashboard_data['Symbol'] == '^GSPC', 'Score'].values[0]
     benchmark_score = max(ndx_score, gspc_score)
 
-    fig, ax = plt.subplots(figsize=(12, 18))  # Slightly reduced figure height
+    fig, ax = plt.subplots(figsize=(12, 17))  # Slightly reduced figure height
     ax.axis('off')
 
        # Add date information closer to the table
