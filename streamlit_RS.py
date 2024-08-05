@@ -94,8 +94,8 @@ def create_dashboard(data, rs_scores, rsi, date):
         row_idx = idx // columns
         symbol = row['Symbol']
         score = int(row['Score'])
-        rsi = int(row['RSI'])  # Convert RSI to integer
-        table_data[row_idx][col] = f"{symbol}: {score}\nRSI: {rsi}"  # No decimal place for RSI
+        rsi = int(round(row['RSI']))  # Round to nearest integer
+        table_data[row_idx][col] = f"{symbol}: {score}\nRSI: {rsi}"
 
     table = ax.table(cellText=table_data, cellLoc='center', loc='center')
     table.auto_set_font_size(True)
@@ -106,7 +106,7 @@ def create_dashboard(data, rs_scores, rsi, date):
         if idx < num_symbols:
             symbol = dashboard_data.iloc[idx]['Symbol']
             score = int(dashboard_data.iloc[idx]['Score'])
-            rsi = int(dashboard_data.iloc[idx]['RSI'])  # Convert RSI to integer
+            rsi = int(round(dashboard_data.iloc[idx]['RSI']))  # Round to nearest integer
             
             if symbol in ['^NDX', '^GSPC']:
                 cell.set_facecolor('yellow')
@@ -120,7 +120,8 @@ def create_dashboard(data, rs_scores, rsi, date):
                 cell.set_facecolor('white')
             
             text_obj = cell.get_text()
-            text_obj.set_text(f"{symbol}: {score}\nRSI: {rsi}")  # No decimal place for RSI
+            text_obj.set_text(f"{symbol}: {score}\nRSI: {rsi}")
+            
             if rsi > 75:
                 text_obj.set_color('red')
             elif rsi < 25:
@@ -144,7 +145,6 @@ st.pyplot(current_dashboard)
 previous_date = data.index[-2]
 previous_dashboard = create_dashboard(data, rs_scores, rsi, previous_date)
 st.pyplot(previous_dashboard)
-
 
 
 
