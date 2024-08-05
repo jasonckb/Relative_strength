@@ -87,7 +87,7 @@ gspc_score = dashboard_data.loc[dashboard_data['Symbol'] == '^GSPC', 'Score'].va
 benchmark_score = max(ndx_score, gspc_score)
 
 # Create the dashboard
-fig, ax = plt.subplots(figsize=(28, 14))
+fig, ax = plt.subplots(figsize=(30, 24))
 ax.axis('off')
 
 # Add title
@@ -113,8 +113,8 @@ table = ax.table(cellText=table_data, cellLoc='center', loc='center')
 
 # Style the table
 table.auto_set_font_size(False)
-table.set_fontsize(14)
-table.scale(2.5, 2.5)
+table.set_fontsize(16)
+table.scale(3, 2)
 
 # Color coding for cells
 for (row, col), cell in table.get_celld().items():
