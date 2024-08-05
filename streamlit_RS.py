@@ -5,7 +5,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 # Set the page configuration
-st.set_page_config(page_title="Relative Strength Dashboard", layout="auto")
+st.set_page_config(page_title="Relative Strength Dashboard", layout="centered")
 
 # Define the 100 symbols
 symbols = [
@@ -91,7 +91,7 @@ fig, ax = plt.subplots(figsize=(20, 12))
 ax.axis('off')
 
 # Add title
-ax.text(0.5, 1.01, "Relative Strength Dashboard", fontsize=24, fontweight='bold', ha='center', va='bottom', transform=ax.transAxes)
+ax.text(0.5, 1.02, "Relative Strength Dashboard", fontsize=24, fontweight='bold', ha='center', va='bottom', transform=ax.transAxes)
 
 # Prepare data for the table
 num_symbols = len(dashboard_data)
@@ -109,7 +109,7 @@ for idx, row in dashboard_data.iterrows():
     table_data[row_idx][col] = f"{symbol}: {score}\nRSI: {rsi:.1f}"
 
 # Create the table
-table = ax.table(cellText=table_data, cellLoc='center', loc='center', colWidths=[0.1]*columns)
+table = ax.table(cellText=table_data, cellLoc='center', loc='center')
 
 # Style the table
 table.auto_set_font_size(True)
@@ -146,10 +146,11 @@ for (row, col), cell in table.get_celld().items():
             text_obj.set_color('black')
 
 plt.tight_layout()
-plt.subplots_adjust(top=0.85)  # Adjust top margin for title
+plt.subplots_adjust(top=0.90)  # Adjust top margin for title
 
 # Display the dashboard in Streamlit
 st.pyplot(fig)
+
 
 
 
