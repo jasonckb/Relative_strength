@@ -5,7 +5,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 # Set the page configuration
-st.set_page_config(page_title="Relative Strength Dashboard", layout="centered")
+st.set_page_config(page_title="Relative Strength Dashboard", layout="wide")
 
 # Define the 100 symbols
 symbols = [
@@ -80,10 +80,10 @@ def create_dashboard(data, rs_scores, rsi, date):
     gspc_score = dashboard_data.loc[dashboard_data['Symbol'] == '^GSPC', 'Score'].values[0]
     benchmark_score = max(ndx_score, gspc_score)
 
-    fig, ax = plt.subplots(figsize=(20, 12))
+    fig, ax = plt.subplots(figsize=(10, 12))
     ax.axis('off')
 
-    ax.text(0.5, 1.02, f"Relative Strength Dashboard ({date.strftime('%Y-%m-%d')})", fontsize=24, fontweight='bold', ha='center', va='bottom', transform=ax.transAxes)
+    ax.text(0.5, 1.02, f"Relative Strength Dashboard\n({date.strftime('%Y-%m-%d')})", fontsize=16, fontweight='bold', ha='center', va='bottom', transform=ax.transAxes)
 
     num_symbols = len(dashboard_data)
     rows, columns = 10, 10
@@ -99,8 +99,9 @@ def create_dashboard(data, rs_scores, rsi, date):
         table_data[row_idx][col] = f"{symbol}: {score}\nRSI: {rsi_str}"
 
     table = ax.table(cellText=table_data, cellLoc='center', loc='center')
-    table.auto_set_font_size(True)
-    table.scale(2, 3)
+    table.auto_set_font_size(False)
+    table.set_fontsize(8)
+    table.scale(1, 1.5)
 
     for (row, col), cell in table.get_celld().items():
         idx = row * columns + col
@@ -135,21 +136,28 @@ def create_dashboard(data, rs_scores, rsi, date):
                 text_obj.set_color('black')
 
     plt.tight_layout()
-    plt.subplots_adjust(top=0.90)
+    plt.subplots_adjust(top=0.95)
     return fig
 
 rs_scores = calculate_relative_strength(data, window=window)
 rsi = calculate_rsi(data)
 
-# Create and display the current day dashboard
+# Create dashboards for current and previous trading days
 current_date = data.index[-1]
-current_dashboard = create_dashboard(data, rs_scores, rsi, current_date)
-st.pyplot(current_dashboard)
-
-# Create and display the previous trading day dashboard
 previous_date = data.index[-2]
-previous_dashboard = create_dashboard(data, rs_scores, rsi, previous_date)
-st.pyplot(previous_dashboard)
+
+# Create two columns for side-by-side display
+col1, col2 = st.columns(2)
+
+# Display the current day dashboard in the first column
+with col1:
+    current_dashboard = create_dashboard(data, rs_scores, rsi, current_date)
+    st.pyplot(current_dashboard)
+
+# Display the previous trading day dashboard in the second column
+with col2:
+    previous_dashboard = create_dashboard(data, rs_scores, rsi, previous_date)
+    st.pyplot(previous_dashboard)
 
 
 
