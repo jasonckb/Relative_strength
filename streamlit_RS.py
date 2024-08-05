@@ -88,7 +88,7 @@ fig, ax = plt.subplots(figsize=(40, 32))
 ax.axis('off')
 
 # Add title
-ax.text(0.5, 0.98, "Relative Strength Dashboard", fontsize=32, fontweight='bold', ha='center', va='top', transform=ax.transAxes)
+ax.text(0.5, 1.05, "Relative Strength Dashboard", fontsize=32, fontweight='bold', ha='center', va='top', transform=ax.transAxes)
 
 # Prepare data for the table
 num_symbols = len(dashboard_data)
@@ -144,7 +144,7 @@ for (row, col), cell in table.get_celld().items():
             text_obj.set_color('black')
 
 plt.tight_layout()
-plt.subplots_adjust(top=0.95)  # Adjust top margin for title
+plt.subplots_adjust(top=0.9)  # Adjust top margin for title
 
 # Display the dashboard in Streamlit
 st.pyplot(fig)
