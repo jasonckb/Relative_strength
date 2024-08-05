@@ -90,12 +90,12 @@ benchmark_score = max(ndx_score, gspc_score)
 latest_date = data.index[-1].strftime("%Y-%m-%d")
 
 # Create the dashboard
-fig, ax = plt.subplots(figsize=(20, 12))
+fig, ax = plt.subplots(figsize=(20, 13))  # Increased figure height slightly
 ax.axis('off')
 
 # Add title with dynamic date
 title = f"Relative Strength Dashboard ({latest_date})"
-ax.text(0.5, 1.00, title, fontsize=24, fontweight='bold', ha='center', va='top', transform=ax.transAxes)
+fig.suptitle(title, fontsize=24, fontweight='bold', y=0.95)  # Adjusted title placement
 
 # Prepare data for the table
 num_symbols = len(dashboard_data)
@@ -128,7 +128,7 @@ for (row, col), cell in table.get_celld().items():
         score = int(dashboard_data.iloc[idx]['Score'])
         rsi = dashboard_data.iloc[idx]['RSI']
         
-        # Set cell color based on new rules
+        # Set cell color based on rules
         if symbol in ['^NDX', '^GSPC']:
             cell.set_facecolor('yellow')
         elif score > 10 and score > benchmark_score:
@@ -150,8 +150,8 @@ for (row, col), cell in table.get_celld().items():
         else:
             text_obj.set_color('black')
 
-plt.tight_layout()
-plt.subplots_adjust(top=0.98, bottom=0.02, left=0.02, right=0.98)  # Adjust margins
+# Adjust layout
+plt.tight_layout(rect=[0, 0.03, 1, 0.95])  # Adjust the rect parameter to leave space for title
 
 # Display the dashboard in Streamlit
 st.pyplot(fig)
