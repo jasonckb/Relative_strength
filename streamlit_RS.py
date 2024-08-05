@@ -84,7 +84,7 @@ gspc_score = dashboard_data.loc[dashboard_data['Symbol'] == '^GSPC', 'Score'].va
 benchmark_score = max(ndx_score, gspc_score)
 
 # Create the dashboard
-fig, ax = plt.subplots(figsize=(60, 48))
+fig, ax = plt.subplots(figsize=(30, 24))
 ax.axis('off')
 
 # Add title
