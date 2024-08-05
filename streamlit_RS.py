@@ -112,8 +112,8 @@ for idx, row in dashboard_data.iterrows():
 table = ax.table(cellText=table_data, cellLoc='center', loc='center')
 
 # Style the table
-table.auto_set_font_size(False)
-table.set_fontsize(12)
+table.auto_set_font_size(True)
+#table.set_fontsize(11)
 table.scale(2, 3)
 
 # Color coding for cells
