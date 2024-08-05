@@ -94,8 +94,9 @@ def create_dashboard(data, rs_scores, rsi, date):
         row_idx = idx // columns
         symbol = row['Symbol']
         score = int(row['Score'])
-        rsi = int(round(row['RSI']))  # Round to nearest integer
-        table_data[row_idx][col] = f"{symbol}: {score}\nRSI: {rsi}"
+        rsi_value = row['RSI']
+        rsi_str = 'N/A' if np.isnan(rsi_value) or np.isinf(rsi_value) else f"{int(np.round(rsi_value))}"
+        table_data[row_idx][col] = f"{symbol}: {score}\nRSI: {rsi_str}"
 
     table = ax.table(cellText=table_data, cellLoc='center', loc='center')
     table.auto_set_font_size(True)
@@ -106,7 +107,7 @@ def create_dashboard(data, rs_scores, rsi, date):
         if idx < num_symbols:
             symbol = dashboard_data.iloc[idx]['Symbol']
             score = int(dashboard_data.iloc[idx]['Score'])
-            rsi = int(round(dashboard_data.iloc[idx]['RSI']))  # Round to nearest integer
+            rsi_value = dashboard_data.iloc[idx]['RSI']
             
             if symbol in ['^NDX', '^GSPC']:
                 cell.set_facecolor('yellow')
@@ -120,12 +121,16 @@ def create_dashboard(data, rs_scores, rsi, date):
                 cell.set_facecolor('white')
             
             text_obj = cell.get_text()
-            text_obj.set_text(f"{symbol}: {score}\nRSI: {rsi}")
+            rsi_str = 'N/A' if np.isnan(rsi_value) or np.isinf(rsi_value) else f"{int(np.round(rsi_value))}"
+            text_obj.set_text(f"{symbol}: {score}\nRSI: {rsi_str}")
             
-            if rsi > 75:
-                text_obj.set_color('red')
-            elif rsi < 25:
-                text_obj.set_color('blue')
+            if not np.isnan(rsi_value) and not np.isinf(rsi_value):
+                if rsi_value > 75:
+                    text_obj.set_color('red')
+                elif rsi_value < 25:
+                    text_obj.set_color('blue')
+                else:
+                    text_obj.set_color('black')
             else:
                 text_obj.set_color('black')
 
@@ -145,7 +150,6 @@ st.pyplot(current_dashboard)
 previous_date = data.index[-2]
 previous_dashboard = create_dashboard(data, rs_scores, rsi, previous_date)
 st.pyplot(previous_dashboard)
-
 
 
 
