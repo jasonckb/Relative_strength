@@ -4,6 +4,9 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 
+# Set the page configuration
+st.set_page_config(page_title="Relative Strength Dashboard", layout="wide")
+
 # Define the 100 symbols
 symbols = [
     '^NDX', '^GSPC', 'AAPL', 'MSFT', 'AMZN', 'NVDA', 'GOOG', 'META', 'TSLA', 'JPM',
@@ -84,7 +87,7 @@ gspc_score = dashboard_data.loc[dashboard_data['Symbol'] == '^GSPC', 'Score'].va
 benchmark_score = max(ndx_score, gspc_score)
 
 # Create the dashboard
-fig, ax = plt.subplots(figsize=(20, 16))
+fig, ax = plt.subplots(figsize=(24, 18))
 ax.axis('off')
 
 # Add title
@@ -110,8 +113,8 @@ table = ax.table(cellText=table_data, cellLoc='center', loc='center')
 
 # Style the table
 table.auto_set_font_size(False)
-table.set_fontsize(12)
-table.scale(3, 2)
+table.set_fontsize(14)
+table.scale(3, 3)
 
 # Color coding for cells
 for (row, col), cell in table.get_celld().items():
