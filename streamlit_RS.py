@@ -80,10 +80,10 @@ def create_dashboard(data, rs_scores, rsi, date):
     gspc_score = dashboard_data.loc[dashboard_data['Symbol'] == '^GSPC', 'Score'].values[0]
     benchmark_score = max(ndx_score, gspc_score)
 
-    fig, ax = plt.subplots(figsize=(12, 26))  # Slightly reduced figure height
+    fig, ax = plt.subplots(figsize=(12, 24))  # Slightly reduced figure height
     ax.axis('off')
 
-    # Add date information closer to the table
+       # Add date information closer to the table
     ax.text(0.5, 0.98, f"Relative Strength Dashboard ({date.strftime('%Y-%m-%d')})", 
             fontsize=16, fontweight='bold', ha='center', va='bottom', transform=ax.transAxes)
 
@@ -100,11 +100,11 @@ def create_dashboard(data, rs_scores, rsi, date):
         rsi_str = 'N/A' if np.isnan(rsi_value) or np.isinf(rsi_value) else f"{int(np.round(rsi_value))}"
         table_data[row_idx][col] = f"{symbol}: {score}\nRSI: {rsi_str}"
 
-    # Adjust table position
+    # Adjust table position and properties
     table = ax.table(cellText=table_data, cellLoc='center', loc='center', bbox=[0, 0.02, 1, 0.95])
     table.auto_set_font_size(False)
-    table.set_fontsize(12)
-    table.scale(1, 2.8)  # Slightly reduced row height
+    table.set_fontsize(14)  # Increased font size
+    table.scale(1, 2.2)  # Reduced row height
 
     for (row, col), cell in table.get_celld().items():
         idx = row * columns + col
