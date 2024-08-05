@@ -80,13 +80,13 @@ def create_dashboard(data, rs_scores, rsi, date):
     gspc_score = dashboard_data.loc[dashboard_data['Symbol'] == '^GSPC', 'Score'].values[0]
     benchmark_score = max(ndx_score, gspc_score)
 
-    fig, ax = plt.subplots(figsize=(10, 12))
+    fig, ax = plt.subplots(figsize=(12, 24))
     ax.axis('off')
 
     ax.text(0.5, 1.02, f"Relative Strength Dashboard\n({date.strftime('%Y-%m-%d')})", fontsize=16, fontweight='bold', ha='center', va='bottom', transform=ax.transAxes)
 
     num_symbols = len(dashboard_data)
-    rows, columns = 10, 10
+    rows, columns = 20, 5
     table_data = [[''] * columns for _ in range(rows)]
 
     for idx, row in dashboard_data.iterrows():
@@ -100,8 +100,8 @@ def create_dashboard(data, rs_scores, rsi, date):
 
     table = ax.table(cellText=table_data, cellLoc='center', loc='center')
     table.auto_set_font_size(False)
-    table.set_fontsize(8)
-    table.scale(1, 1.5)
+    table.set_fontsize(9)
+    table.scale(1, 2)
 
     for (row, col), cell in table.get_celld().items():
         idx = row * columns + col
@@ -136,7 +136,7 @@ def create_dashboard(data, rs_scores, rsi, date):
                 text_obj.set_color('black')
 
     plt.tight_layout()
-    plt.subplots_adjust(top=0.95)
+    plt.subplots_adjust(top=0.97)
     return fig
 
 rs_scores = calculate_relative_strength(data, window=window)
