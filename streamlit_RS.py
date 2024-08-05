@@ -102,8 +102,8 @@ def create_dashboard(data, rs_scores, rsi, date):
 
     # Adjust table position and properties
     table = ax.table(cellText=table_data, cellLoc='center', loc='center', bbox=[0, 0.02, 1, 0.95])
-    table.auto_set_font_size(False)
-    table.set_fontsize(14)  # Increased font size
+    table.auto_set_font_size(True)
+    #table.set_fontsize(14)  # Increased font size
     table.scale(1, 1.5)  # Reduced row height
 
     for (row, col), cell in table.get_celld().items():
