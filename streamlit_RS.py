@@ -84,11 +84,11 @@ gspc_score = dashboard_data.loc[dashboard_data['Symbol'] == '^GSPC', 'Score'].va
 benchmark_score = max(ndx_score, gspc_score)
 
 # Create the dashboard
-fig, ax = plt.subplots(figsize=(20, 16))
+fig, ax = plt.subplots(figsize=(40, 32))
 ax.axis('off')
 
 # Add title
-ax.text(0.5, 0.98, "Relative Strength Dashboard", fontsize=16, fontweight='bold', ha='center', va='top', transform=ax.transAxes)
+ax.text(0.5, 0.98, "Relative Strength Dashboard", fontsize=32, fontweight='bold', ha='center', va='top', transform=ax.transAxes)
 
 # Prepare data for the table
 num_symbols = len(dashboard_data)
@@ -110,8 +110,8 @@ table = ax.table(cellText=table_data, cellLoc='center', loc='center')
 
 # Style the table
 table.auto_set_font_size(False)
-table.set_fontsize(8)
-table.scale(1, 1.5)
+table.set_fontsize(16)
+table.scale(2, 3)
 
 # Color coding for cells
 for (row, col), cell in table.get_celld().items():
@@ -148,3 +148,4 @@ plt.subplots_adjust(top=0.95)  # Adjust top margin for title
 
 # Display the dashboard in Streamlit
 st.pyplot(fig)
+
