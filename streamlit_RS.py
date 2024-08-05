@@ -35,19 +35,21 @@ def download_data(symbols):
 data = download_data(symbols)
 
 # Calculate relative strength
-def calculate_relative_strength(data, window=200):
+def calculate_relative_strength(data, window=200, date=None):
+    if date is None:
+        date = data.index[-1]
     rs_scores = pd.DataFrame(index=data.index, columns=data.columns)
     for symbol in data.columns:
         symbol_data = data[symbol]
         other_data = data.drop(columns=[symbol])
         
-        pct_change = symbol_data.pct_change(periods=window)
-        other_pct_change = other_data.pct_change(periods=window)
+        pct_change = symbol_data.pct_change(periods=window).loc[:date]
+        other_pct_change = other_data.pct_change(periods=window).loc[:date]
         
         outperformance = (pct_change.iloc[-1] > other_pct_change.iloc[-1]).sum()
         underperformance = (pct_change.iloc[-1] < other_pct_change.iloc[-1]).sum()
         
-        rs_scores[symbol] = outperformance - underperformance
+        rs_scores[symbol].loc[date] = outperformance - underperformance
     
     return rs_scores
 
@@ -142,25 +144,29 @@ def create_dashboard(data, rs_scores, rsi, date):
     plt.tight_layout(pad=1.0)  # Reduce padding
     return fig
 
-rs_scores = calculate_relative_strength(data, window=window)
 rsi = calculate_rsi(data)
 
-# Create dashboards for current and previous trading days
+# Get the current date and the date to compare against
 current_date = data.index[-1]
-previous_date = data.index[-compare_days]  # Use the user input for previous days
+previous_date = data.index[-compare_days]
+
+# Calculate relative strength scores for the current date and the comparison date
+rs_scores_current = calculate_relative_strength(data, window=window, date=current_date)
+rs_scores_previous = calculate_relative_strength(data, window=window, date=previous_date)
 
 # Create two columns for side-by-side display
 col1, col2 = st.columns(2)
 
 # Display the current day dashboard in the first column
 with col1:
-    current_dashboard = create_dashboard(data, rs_scores, rsi, current_date)
+    current_dashboard = create_dashboard(data, rs_scores_current, rsi, current_date)
     st.pyplot(current_dashboard)
 
 # Display the previous trading day dashboard in the second column
 with col2:
-    previous_dashboard = create_dashboard(data, rs_scores, rsi, previous_date)
+    previous_dashboard = create_dashboard(data, rs_scores_previous, rsi, previous_date)
     st.pyplot(previous_dashboard)
+
 
 
 
