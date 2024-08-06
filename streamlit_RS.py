@@ -56,7 +56,6 @@ else:  # HK Stock
     symbols = hk_symbols
     benchmarks = ['^HSI', '^HSCEI']
 
-# Download data
 @st.cache_data
 def download_data(symbols):
     # Set the end date to the current time in Hong Kong
@@ -69,11 +68,12 @@ def download_data(symbols):
     # Add one day to the end date to ensure we capture the most recent data
     end_date += timedelta(days=1)
     
-    # Download the data
-    data = yf.download(symbols, start=start_date, end=end_date)['Close']
+    # Download the data with progress bar disabled
+    data = yf.download(symbols, start=start_date, end=end_date, progress=False)['Close']
     
     return data
 
+# Use the function
 data = download_data(symbols)
 
 # Print the last available date for debugging
