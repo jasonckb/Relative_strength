@@ -104,13 +104,13 @@ def calculate_rsi(data, window=14):
     gain = delta.where(delta > 0, 0)
     loss = -delta.where(delta < 0, 0)
     
-    avg_gain = gain.rolling(window=window, min_periods=1).mean()
-    avg_loss = loss.rolling(window=window, min_periods=1).mean()
+    avg_gain = gain.ewm(com=window-1, adjust=False).mean()
+    avg_loss = loss.ewm(com=window-1, adjust=False).mean()
     
     rs = avg_gain / avg_loss
     rsi = 100 - (100 / (1 + rs))
     
-    return rsi.iloc[-1]  # Return only the last RSI value
+    return rsi
 
 def create_dashboard(data, rs_scores, date, benchmarks):
     latest_scores = rs_scores.loc[date].sort_values(ascending=False)
@@ -123,9 +123,10 @@ def create_dashboard(data, rs_scores, date, benchmarks):
     # Calculate RSI for each symbol individually
     rsi_values = {}
     for symbol in dashboard_data['Symbol']:
-        symbol_data = data[symbol].dropna()  # Remove NaN values
-        if len(symbol_data) >= 14:  # Ensure we have enough data for RSI calculation
-            rsi_values[symbol] = calculate_rsi(symbol_data[-15:])  # Use last 15 days of data
+        symbol_data = data[symbol].dropna()
+        if len(symbol_data) >= 14:
+            rsi = calculate_rsi(symbol_data)
+            rsi_values[symbol] = rsi.loc[date]
         else:
             rsi_values[symbol] = np.nan
 
@@ -202,28 +203,30 @@ def get_previous_trading_day(data, current_date, days_ago):
     else:
         st.error(f"Not enough historical data to go back {days_ago} trading days.")
         return None
-    
+
 # Get the current date and the date to compare against
 current_date = data.index[-1]
 previous_date = get_previous_trading_day(data, current_date, compare_days)
 
-# Calculate relative strength scores for the current date and the comparison date
-rs_scores_current = calculate_relative_strength(data, window=window, date=current_date)
-rs_scores_previous = calculate_relative_strength(data, window=window, date=previous_date)
+if previous_date is not None:
+    # Calculate relative strength scores for the current date and the comparison date
+    rs_scores_current = calculate_relative_strength(data, window=window, date=current_date)
+    rs_scores_previous = calculate_relative_strength(data, window=window, date=previous_date)
 
-# Create two columns for side-by-side display
-col1, col2 = st.columns(2)
+    # Create two columns for side-by-side display
+    col1, col2 = st.columns(2)
 
-# Display the current day dashboard in the first column
-with col1:
-    current_dashboard = create_dashboard(data, rs_scores_current, current_date, benchmarks)
-    st.pyplot(current_dashboard)
+    # Display the current day dashboard in the first column
+    with col1:
+        current_dashboard = create_dashboard(data, rs_scores_current, current_date, benchmarks)
+        st.pyplot(current_dashboard)
 
-# Display the previous trading day dashboard in the second column
-with col2:
-    previous_dashboard = create_dashboard(data, rs_scores_previous, previous_date, benchmarks)
-    st.pyplot(previous_dashboard)
-
+    # Display the previous trading day dashboard in the second column
+    with col2:
+        previous_dashboard = create_dashboard(data, rs_scores_previous, previous_date, benchmarks)
+        st.pyplot(previous_dashboard)
+else:
+    st.error("Unable to create comparison dashboard due to insufficient historical data.")
 
 
 
