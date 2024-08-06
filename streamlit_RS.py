@@ -54,7 +54,7 @@ if market == 'US Stock':
     benchmarks = ['^NDX', '^GSPC']
 else:  # HK Stock
     symbols = hk_symbols
-    benchmarks = ['^HSI', '^HSTECH.HK']
+    benchmarks = ['^HSI', 'HSTECH.HK']
 
 # Download data
 @st.cache_data
