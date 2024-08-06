@@ -112,17 +112,23 @@ def calculate_rsi(data, window=14):
     rsi = 100 - (100 / (1 + rs))
     return rsi
 
-def create_dashboard(data, rs_scores, rsi, date, benchmarks):
+def create_dashboard(data, rs_scores, date, benchmarks):
     latest_scores = rs_scores.loc[date].sort_values(ascending=False)
-    latest_rsi = rsi.loc[date]
-
+    
     dashboard_data = pd.DataFrame({
         'Symbol': latest_scores.index,
         'Score': latest_scores.values,
-        'RSI': latest_rsi.values
     })
 
-    dashboard_data = dashboard_data.sort_values('Score', ascending=False).reset_index(drop=True)
+    # Sort the original data based on the RS scores
+    sorted_data = data[dashboard_data['Symbol']]
+    
+    # Recalculate RSI on the sorted data
+    rsi = calculate_rsi(sorted_data)
+    latest_rsi = rsi.iloc[-1]
+
+    dashboard_data['RSI'] = latest_rsi.values
+    dashboard_data = dashboard_data.reset_index(drop=True)
     dashboard_data['Rank'] = dashboard_data.index + 1
 
     benchmark_scores = [dashboard_data.loc[dashboard_data['Symbol'] == b, 'Score'].values[0] for b in benchmarks]
@@ -144,7 +150,7 @@ def create_dashboard(data, rs_scores, rsi, date, benchmarks):
         symbol = row['Symbol']
         score = int(row['Score'])
         rsi_value = row['RSI']
-        rsi_str = 'N/A' if np.isnan(rsi_value) or np.isinf(rsi_value) else f"{int(np.round(rsi_value))}"
+        rsi_str = 'N/A' if np.isnan(rsi_value) or np.isinf(rsi_value) else f"{rsi_value:.1f}"
         table_data[row_idx][col] = f"{symbol}: {score}\nRSI: {rsi_str}"
 
     table = ax.table(cellText=table_data, cellLoc='center', loc='center', bbox=[0, 0.02, 1, 0.95])
@@ -171,13 +177,13 @@ def create_dashboard(data, rs_scores, rsi, date, benchmarks):
                 cell.set_facecolor('white')
             
             text_obj = cell.get_text()
-            rsi_str = 'N/A' if np.isnan(rsi_value) or np.isinf(rsi_value) else f"{int(np.round(rsi_value))}"
+            rsi_str = 'N/A' if np.isnan(rsi_value) or np.isinf(rsi_value) else f"{rsi_value:.1f}"
             text_obj.set_text(f"{symbol}: {score}\nRSI: {rsi_str}")
             
             if not np.isnan(rsi_value) and not np.isinf(rsi_value):
-                if rsi_value > 75:
+                if rsi_value > 70:
                     text_obj.set_color('red')
-                elif rsi_value < 25:
+                elif rsi_value < 30:
                     text_obj.set_color('blue')
                 else:
                     text_obj.set_color('black')
