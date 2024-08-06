@@ -101,7 +101,6 @@ def calculate_relative_strength(data, window=200, date=None):
 # RSI calculation
 def calculate_rsi(data, window=14):
     delta = data.diff()
-    
     gain = delta.clip(lower=0)
     loss = -delta.clip(upper=0)
     
@@ -110,7 +109,7 @@ def calculate_rsi(data, window=14):
     
     rs = avg_gain / avg_loss
     rsi = 100 - (100 / (1 + rs))
-    return rsi
+    return rsi.iloc[-1]  # Return only the last RSI value
 
 def create_dashboard(data, rs_scores, date, benchmarks):
     latest_scores = rs_scores.loc[date].sort_values(ascending=False)
@@ -120,14 +119,16 @@ def create_dashboard(data, rs_scores, date, benchmarks):
         'Score': latest_scores.values,
     })
 
-    # Sort the original data based on the RS scores
-    sorted_data = data[dashboard_data['Symbol']]
-    
-    # Recalculate RSI on the sorted data
-    rsi = calculate_rsi(sorted_data)
-    latest_rsi = rsi.iloc[-1]
+    # Calculate RSI for each symbol individually
+    rsi_values = {}
+    for symbol in dashboard_data['Symbol']:
+        symbol_data = data[symbol].dropna()  # Remove NaN values
+        if len(symbol_data) > 14:  # Ensure we have enough data for RSI calculation
+            rsi_values[symbol] = calculate_rsi(symbol_data)
+        else:
+            rsi_values[symbol] = np.nan
 
-    dashboard_data['RSI'] = latest_rsi.values
+    dashboard_data['RSI'] = dashboard_data['Symbol'].map(rsi_values)
     dashboard_data = dashboard_data.reset_index(drop=True)
     dashboard_data['Rank'] = dashboard_data.index + 1
 
