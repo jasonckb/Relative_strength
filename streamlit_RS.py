@@ -4,6 +4,7 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 from datetime import datetime, timedelta
+import pytz
 
 # Set the page configuration
 st.set_page_config(page_title="Relative Strength Dashboard", layout="wide")
@@ -58,12 +59,25 @@ else:  # HK Stock
 # Download data
 @st.cache_data
 def download_data(symbols):
-    end_date = datetime.now()
+    # Set the end date to the current time in Hong Kong
+    hk_tz = pytz.timezone('Asia/Hong_Kong')
+    end_date = datetime.now(hk_tz)
+    
+    # Set the start date to one year before the end date
     start_date = end_date - timedelta(days=365)
+    
+    # Add one day to the end date to ensure we capture the most recent data
+    end_date += timedelta(days=1)
+    
+    # Download the data
     data = yf.download(symbols, start=start_date, end=end_date)['Close']
+    
     return data
 
 data = download_data(symbols)
+
+# Print the last available date for debugging
+st.write(f"Last available date in the data: {data.index[-1]}")
 
 # Calculate relative strength
 def calculate_relative_strength(data, window=200, date=None):
@@ -84,7 +98,7 @@ def calculate_relative_strength(data, window=200, date=None):
     
     return rs_scores
 
-# Updated RSI calculation
+# RSI calculation
 def calculate_rsi(data, window=14):
     delta = data.diff()
     
