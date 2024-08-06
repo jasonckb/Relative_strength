@@ -123,6 +123,9 @@ def create_dashboard(data, rs_scores, date, benchmarks):
     for symbol in data.columns:
         symbol_data = data[symbol].loc[:date].dropna()
         if len(symbol_data) >= 14:
+            # Check if the starting date is correct
+            if symbol_data.index[0] != data.index[0]:
+                raise ValueError(f"Starting date for symbol {symbol} is incorrect")
             rsi_series = calculate_rsi(symbol_data)
             rsi_values[symbol] = rsi_series.iloc[-1] if not rsi_series.empty else np.nan
         else:
@@ -137,6 +140,10 @@ def create_dashboard(data, rs_scores, date, benchmarks):
         'Score': latest_scores.values,
         'RSI': [rsi_values[symbol] for symbol in latest_scores.index]
     })
+
+    # Check if the symbols are sorted correctly
+    if not dashboard_data['Symbol'].equals(latest_scores.index):
+        raise ValueError("Symbols are not sorted correctly")
 
     dashboard_data = dashboard_data.reset_index(drop=True)
     dashboard_data['Rank'] = dashboard_data.index + 1
