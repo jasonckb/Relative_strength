@@ -101,14 +101,15 @@ def calculate_relative_strength(data, window=200, date=None):
 # RSI calculation
 def calculate_rsi(data, window=14):
     delta = data.diff()
-    gain = delta.clip(lower=0)
-    loss = -delta.clip(upper=0)
+    gain = delta.where(delta > 0, 0)
+    loss = -delta.where(delta < 0, 0)
     
-    avg_gain = gain.rolling(window=window).mean()
-    avg_loss = loss.rolling(window=window).mean()
+    avg_gain = gain.rolling(window=window, min_periods=1).mean()
+    avg_loss = loss.rolling(window=window, min_periods=1).mean()
     
     rs = avg_gain / avg_loss
     rsi = 100 - (100 / (1 + rs))
+    
     return rsi.iloc[-1]  # Return only the last RSI value
 
 def create_dashboard(data, rs_scores, date, benchmarks):
@@ -123,8 +124,8 @@ def create_dashboard(data, rs_scores, date, benchmarks):
     rsi_values = {}
     for symbol in dashboard_data['Symbol']:
         symbol_data = data[symbol].dropna()  # Remove NaN values
-        if len(symbol_data) > 14:  # Ensure we have enough data for RSI calculation
-            rsi_values[symbol] = calculate_rsi(symbol_data)
+        if len(symbol_data) >= 14:  # Ensure we have enough data for RSI calculation
+            rsi_values[symbol] = calculate_rsi(symbol_data[-15:])  # Use last 15 days of data
         else:
             rsi_values[symbol] = np.nan
 
