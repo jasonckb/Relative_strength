@@ -193,9 +193,17 @@ def create_dashboard(data, rs_scores, date, benchmarks):
     plt.tight_layout(pad=1.0)
     return fig
 
+def get_previous_trading_day(data, current_date, days_ago):
+    date_index = data.index.get_loc(current_date)
+    if days_ago <= date_index:
+        return data.index[date_index - days_ago]
+    else:
+        st.error(f"Not enough historical data to go back {days_ago} trading days.")
+        return None
+    
 # Get the current date and the date to compare against
 current_date = data.index[-1]
-previous_date = data.index[-compare_days]
+previous_date = get_previous_trading_day(data, current_date, compare_days)
 
 # Calculate relative strength scores for the current date and the comparison date
 rs_scores_current = calculate_relative_strength(data, window=window, date=current_date)
