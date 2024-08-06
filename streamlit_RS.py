@@ -25,7 +25,7 @@ us_symbols = [
 
 # Define the HK symbols
 hk_symbols = [
-    '^HSI', '^HSTECH', '0017.HK', '0241.HK', '0066.HK', '1038.HK', '0006.HK', '0011.HK', '0012.HK', '0857.HK',
+    '^HSI', 'HSTECH.HK', '0017.HK', '0241.HK', '0066.HK', '1038.HK', '0006.HK', '0011.HK', '0012.HK', '0857.HK',
     '3988.HK', '1044.HK', '0386.HK', '2388.HK', '1113.HK', '0941.HK', '1997.HK', '0001.HK', '1093.HK', '1109.HK',
     '1177.HK', '1211.HK', '1299.HK', '1398.HK', '0016.HK', '0175.HK', '1810.HK', '1876.HK', '1928.HK', '2007.HK',
     '2018.HK', '2269.HK', '2313.HK', '2318.HK', '2319.HK', '2331.HK', '2382.HK', '2628.HK', '0267.HK', '0027.HK',
@@ -54,7 +54,7 @@ if market == 'US Stock':
     benchmarks = ['^NDX', '^GSPC']
 else:  # HK Stock
     symbols = hk_symbols
-    benchmarks = ['^HSI', '^HSTECH']
+    benchmarks = ['^HSI', '^HSTECH.HK']
 
 # Download data
 @st.cache_data
