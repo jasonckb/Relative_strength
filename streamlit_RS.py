@@ -142,7 +142,7 @@ def create_dashboard(data, rs_scores, date, benchmarks):
     })
 
     # Check if the symbols are sorted correctly
-    if not dashboard_data['Symbol'].equals(latest_scores.index):
+    if not np.array_equal(dashboard_data['Symbol'].values, latest_scores.index.values):
         raise ValueError("Symbols are not sorted correctly")
 
     dashboard_data = dashboard_data.reset_index(drop=True)
