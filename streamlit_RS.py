@@ -102,7 +102,7 @@ def calculate_relative_strength(data, window=200, date=None):
 def calculate_rsi(data, window=14, date=None):
     if date is None:
         date = data.index[-1]
-    data = data.dropna()
+    data = data.loc[:date].dropna()
     if len(data) < window:
         return np.nan
 
@@ -116,7 +116,7 @@ def calculate_rsi(data, window=14, date=None):
     rs = avg_gain / avg_loss
     rsi = 100 - (100 / (1 + rs))
 
-    return rsi.loc[date] if date in rsi.index else np.nan
+    return rsi.iloc[-1] if len(rsi) > 0 else np.nan
 
 def create_dashboard(data, rs_scores, date, benchmarks):
     latest_scores = rs_scores.loc[date].sort_values(ascending=False)
@@ -131,7 +131,7 @@ def create_dashboard(data, rs_scores, date, benchmarks):
     for symbol in dashboard_data['Symbol']:
         symbol_data = data[symbol].dropna()
         if len(symbol_data) >= 14:
-            rsi_values[symbol] = calculate_rsi(symbol_data.loc[:date], date=date)
+            rsi_values[symbol] = calculate_rsi(symbol_data, date=date)
         else:
             rsi_values[symbol] = np.nan
 
