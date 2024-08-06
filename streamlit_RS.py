@@ -100,6 +100,10 @@ def calculate_relative_strength(data, window=200, date=None):
 
 # RSI calculation
 def calculate_rsi(data, window=14):
+    # Check if window size is valid
+    if window < 2 or window > len(data):
+        raise ValueError("Window size must be between 2 and the length of the data")
+
     delta = data.diff()
     gain = delta.where(delta > 0, 0)
     loss = -delta.where(delta < 0, 0)
@@ -111,6 +115,7 @@ def calculate_rsi(data, window=14):
     rsi = 100 - (100 / (1 + rs))
 
     return rsi
+
 
 def create_dashboard(data, rs_scores, date, benchmarks):
     # Calculate RSI for each symbol
