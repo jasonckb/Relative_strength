@@ -116,7 +116,7 @@ def calculate_rsi(data, window=14, date=None):
     rs = avg_gain / avg_loss
     rsi = 100 - (100 / (1 + rs))
 
-    return rsi.iloc[-1] if len(rsi) > 0 else np.nan
+    return rsi.iloc[-1] if not rsi.empty else np.nan
 
 def create_dashboard(data, rs_scores, date, benchmarks):
     latest_scores = rs_scores.loc[date].sort_values(ascending=False)
@@ -129,7 +129,7 @@ def create_dashboard(data, rs_scores, date, benchmarks):
     # Calculate RSI for each symbol individually
     rsi_values = {}
     for symbol in dashboard_data['Symbol']:
-        symbol_data = data[symbol].dropna()
+        symbol_data = data[symbol].loc[:date].dropna()
         if len(symbol_data) >= 14:
             rsi_values[symbol] = calculate_rsi(symbol_data, date=date)
         else:
