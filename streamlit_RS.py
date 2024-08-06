@@ -106,7 +106,7 @@ def calculate_rsi(data, window=14, date=None):
     if len(data) < window:
         return np.nan
 
-    delta = data.loc[:date].diff()
+    delta = data.diff()
     gain = delta.where(delta > 0, 0)
     loss = -delta.where(delta < 0, 0)
 
@@ -131,7 +131,7 @@ def create_dashboard(data, rs_scores, date, benchmarks):
     for symbol in dashboard_data['Symbol']:
         symbol_data = data[symbol].dropna()
         if len(symbol_data) >= 14:
-            rsi_values[symbol] = calculate_rsi(symbol_data, date=date)
+            rsi_values[symbol] = calculate_rsi(symbol_data.loc[:date], date=date)
         else:
             rsi_values[symbol] = np.nan
 
@@ -232,6 +232,7 @@ if previous_date is not None:
         st.pyplot(previous_dashboard)
 else:
     st.error("Unable to create comparison dashboard due to insufficient historical data.")
+
 
 
 
