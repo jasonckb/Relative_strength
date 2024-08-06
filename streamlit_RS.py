@@ -121,16 +121,25 @@ def create_dashboard(data, rs_scores, date, benchmarks):
     })
 
     # Calculate RSI for each symbol individually
-    rsi_values = {}
+    rsi_values = []
     for symbol in dashboard_data['Symbol']:
-        symbol_data = data[symbol].dropna()
+        symbol_data = data[symbol].loc[:date]
         if len(symbol_data) >= 14:
-            rsi = calculate_rsi(symbol_data)
-            rsi_values[symbol] = rsi.loc[date]
+            delta = symbol_data.diff()
+            gain = delta.where(delta > 0, 0)
+            loss = -delta.where(delta < 0, 0)
+            
+            avg_gain = gain.rolling(window=14).mean()
+            avg_loss = loss.rolling(window=14).mean()
+            
+            rs = avg_gain / avg_loss
+            rsi = 100 - (100 / (1 + rs))
+            
+            rsi_values.append(rsi.iloc[-1])
         else:
-            rsi_values[symbol] = np.nan
+            rsi_values.append(np.nan)
 
-    dashboard_data['RSI'] = dashboard_data['Symbol'].map(rsi_values)
+    dashboard_data['RSI'] = rsi_values
     dashboard_data = dashboard_data.reset_index(drop=True)
     dashboard_data['Rank'] = dashboard_data.index + 1
 
