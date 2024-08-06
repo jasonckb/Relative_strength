@@ -99,18 +99,24 @@ def calculate_relative_strength(data, window=200, date=None):
     return rs_scores
 
 # RSI calculation
-def calculate_rsi(data, window=14):
-    delta = data.diff()
+def calculate_rsi(data, window=14, date=None):
+    if date is None:
+        date = data.index[-1]
+    data = data.dropna()
+    if len(data) < window:
+        return np.nan
+
+    delta = data.loc[:date].diff()
     gain = delta.where(delta > 0, 0)
     loss = -delta.where(delta < 0, 0)
-    
+
     avg_gain = gain.rolling(window=window, min_periods=1).mean()
     avg_loss = loss.rolling(window=window, min_periods=1).mean()
-    
+
     rs = avg_gain / avg_loss
     rsi = 100 - (100 / (1 + rs))
-    
-    return rsi.iloc[-1]  # Return only the last RSI value
+
+    return rsi.loc[date] if date in rsi.index else np.nan
 
 def create_dashboard(data, rs_scores, date, benchmarks):
     latest_scores = rs_scores.loc[date].sort_values(ascending=False)
@@ -123,9 +129,9 @@ def create_dashboard(data, rs_scores, date, benchmarks):
     # Calculate RSI for each symbol individually
     rsi_values = {}
     for symbol in dashboard_data['Symbol']:
-        symbol_data = data[symbol].dropna()  # Remove NaN values
-        if len(symbol_data) >= 14:  # Ensure we have enough data for RSI calculation
-            rsi_values[symbol] = calculate_rsi(symbol_data[-15:])  # Use last 15 days of data
+        symbol_data = data[symbol].dropna()
+        if len(symbol_data) >= 14:
+            rsi_values[symbol] = calculate_rsi(symbol_data, date=date)
         else:
             rsi_values[symbol] = np.nan
 
@@ -226,6 +232,7 @@ if previous_date is not None:
         st.pyplot(previous_dashboard)
 else:
     st.error("Unable to create comparison dashboard due to insufficient historical data.")
+
 
 
 
