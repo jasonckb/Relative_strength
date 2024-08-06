@@ -62,16 +62,16 @@ def download_data(symbols):
     # Set the end date to the current time in Hong Kong
     hk_tz = pytz.timezone('Asia/Hong_Kong')
     end_date = datetime.now(hk_tz)
-    
+
     # Set the start date to one year before the end date
     start_date = end_date - timedelta(days=365)
-    
+
     # Add one day to the end date to ensure we capture the most recent data
     end_date += timedelta(days=1)
-    
+
     # Download the data with progress bar disabled
     data = yf.download(symbols, start=start_date, end=end_date, progress=False)['Close']
-    
+
     return data
 
 data = download_data(symbols)
@@ -87,15 +87,15 @@ def calculate_relative_strength(data, window=200, date=None):
     for symbol in data.columns:
         symbol_data = data[symbol]
         other_data = data.drop(columns=[symbol])
-        
+
         pct_change = symbol_data.pct_change(periods=window).loc[:date]
         other_pct_change = other_data.pct_change(periods=window).loc[:date]
-        
+
         outperformance = (pct_change.iloc[-1] > other_pct_change.iloc[-1]).sum()
         underperformance = (pct_change.iloc[-1] < other_pct_change.iloc[-1]).sum()
-        
+
         rs_scores[symbol].loc[date] = outperformance - underperformance
-    
+
     return rs_scores
 
 # RSI calculation
@@ -113,16 +113,9 @@ def calculate_rsi(data, window=14):
     return rsi
 
 def create_dashboard(data, rs_scores, date, benchmarks):
-    latest_scores = rs_scores.loc[date].sort_values(ascending=False)
-    
-    dashboard_data = pd.DataFrame({
-        'Symbol': latest_scores.index,
-        'Score': latest_scores.values,
-    })
-
-    # Calculate RSI for each symbol individually
+    # Calculate RSI for each symbol
     rsi_values = {}
-    for symbol in dashboard_data['Symbol']:
+    for symbol in data.columns:
         symbol_data = data[symbol].loc[:date].dropna()
         if len(symbol_data) >= 14:
             rsi_series = calculate_rsi(symbol_data)
@@ -130,7 +123,16 @@ def create_dashboard(data, rs_scores, date, benchmarks):
         else:
             rsi_values[symbol] = np.nan
 
-    dashboard_data['RSI'] = dashboard_data['Symbol'].map(rsi_values)
+    # Sort symbols based on relative strength scores
+    latest_scores = rs_scores.loc[date].sort_values(ascending=False)
+
+    # Create dashboard data
+    dashboard_data = pd.DataFrame({
+        'Symbol': latest_scores.index,
+        'Score': latest_scores.values,
+        'RSI': [rsi_values[symbol] for symbol in latest_scores.index]
+    })
+
     dashboard_data = dashboard_data.reset_index(drop=True)
     dashboard_data['Rank'] = dashboard_data.index + 1
 
@@ -140,7 +142,7 @@ def create_dashboard(data, rs_scores, date, benchmarks):
     fig, ax = plt.subplots(figsize=(12, 17))
     ax.axis('off')
 
-    ax.text(0.5, 0.98, f"Relative Strength Dashboard ({date.strftime('%Y-%m-%d')})", 
+    ax.text(0.5, 0.98, f"Relative Strength Dashboard ({date.strftime('%Y-%m-%d')})",
             fontsize=16, fontweight='bold', ha='center', va='bottom', transform=ax.transAxes)
 
     num_symbols = len(dashboard_data)
@@ -167,7 +169,7 @@ def create_dashboard(data, rs_scores, date, benchmarks):
             symbol = dashboard_data.iloc[idx]['Symbol']
             score = int(dashboard_data.iloc[idx]['Score'])
             rsi_value = dashboard_data.iloc[idx]['RSI']
-            
+
             if symbol in benchmarks:
                 cell.set_facecolor('yellow')
             elif score > 10 and score > benchmark_score:
@@ -178,11 +180,11 @@ def create_dashboard(data, rs_scores, date, benchmarks):
                 cell.set_facecolor('lightcoral')
             else:
                 cell.set_facecolor('white')
-            
+
             text_obj = cell.get_text()
             rsi_str = 'N/A' if np.isnan(rsi_value) or np.isinf(rsi_value) else f"{rsi_value:.1f}"
             text_obj.set_text(f"{symbol}: {score}\nRSI: {rsi_str}")
-            
+
             if not np.isnan(rsi_value) and not np.isinf(rsi_value):
                 if rsi_value > 70:
                     text_obj.set_color('red')
