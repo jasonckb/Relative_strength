@@ -56,6 +56,7 @@ else:  # HK Stock
     symbols = hk_symbols
     benchmarks = ['^HSI', '^HSCEI']
 
+# Download data
 @st.cache_data
 def download_data(symbols):
     # Set the end date to the current time in Hong Kong
@@ -73,7 +74,6 @@ def download_data(symbols):
     
     return data
 
-# Use the function
 data = download_data(symbols)
 
 # Print the last available date for debugging
@@ -193,8 +193,6 @@ def create_dashboard(data, rs_scores, date, benchmarks):
     plt.tight_layout(pad=1.0)
     return fig
 
-rsi = calculate_rsi(data)
-
 # Get the current date and the date to compare against
 current_date = data.index[-1]
 previous_date = data.index[-compare_days]
@@ -208,12 +206,12 @@ col1, col2 = st.columns(2)
 
 # Display the current day dashboard in the first column
 with col1:
-    current_dashboard = create_dashboard(data, rs_scores_current, rsi, current_date, benchmarks)
+    current_dashboard = create_dashboard(data, rs_scores_current, current_date, benchmarks)
     st.pyplot(current_dashboard)
 
 # Display the previous trading day dashboard in the second column
 with col2:
-    previous_dashboard = create_dashboard(data, rs_scores_previous, rsi, previous_date, benchmarks)
+    previous_dashboard = create_dashboard(data, rs_scores_previous, previous_date, benchmarks)
     st.pyplot(previous_dashboard)
 
 
