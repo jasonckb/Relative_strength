@@ -61,19 +61,11 @@ else:  # HK Stock
 # Download data
 @st.cache_data
 def download_data(symbols):
-    # Set the end date to the current time in Hong Kong
     hk_tz = pytz.timezone('Asia/Hong_Kong')
     end_date = datetime.now(hk_tz)
-
-    # Set the start date to one year before the end date
     start_date = end_date - timedelta(days=365)
-
-    # Add one day to the end date to ensure we capture the most recent data
     end_date += timedelta(days=1)
-
-    # Download the data with progress bar disabled
     data = yf.download(symbols, start=start_date, end=end_date, progress=False)
-
     return data
 
 data = download_data(symbols)
@@ -81,7 +73,6 @@ data = download_data(symbols)
 # Print the last available date for debugging
 st.write(f"Last available date in the data: {data.index[-1]}")
 
-# Calculate relative strength
 def calculate_relative_strength(data, window=200, date=None):
     if date is None:
         date = data.index[-1]
@@ -89,34 +80,27 @@ def calculate_relative_strength(data, window=200, date=None):
     for symbol in data.columns:
         symbol_data = data[symbol]
         other_data = data.drop(columns=[symbol])
-
         pct_change = symbol_data.pct_change(periods=window).loc[:date]
         other_pct_change = other_data.pct_change(periods=window).loc[:date]
-
         outperformance = (pct_change.iloc[-1] > other_pct_change.iloc[-1]).sum()
         underperformance = (pct_change.iloc[-1] < other_pct_change.iloc[-1]).sum()
-
         rs_scores[symbol].loc[date] = outperformance - underperformance
-
     return rs_scores
 
-# RSI calculation
 def calculate_rsi(data, window=14):
     delta = data.diff()
     gain = delta.where(delta > 0, 0)
     loss = -delta.where(delta < 0, 0)
-
     avg_gain = gain.ewm(com=window-1, min_periods=window).mean()
     avg_loss = loss.ewm(com=window-1, min_periods=window).mean()
-
     rs = avg_gain / avg_loss
     rsi = 100 - (100 / (1 + rs))
     return rsi
 
 def create_dashboard(data, rs_scores, date, benchmarks):
     rsi_values = {}
-    for symbol in data.columns:
-        symbol_data = data[symbol].loc[:date].dropna()
+    for symbol in data.columns.levels[1]:
+        symbol_data = data['Close'][symbol].loc[:date].dropna()
         if len(symbol_data) >= 14:
             rsi_series = calculate_rsi(symbol_data)
             rsi_values[symbol] = rsi_series.iloc[-1]
@@ -136,62 +120,44 @@ def create_dashboard(data, rs_scores, date, benchmarks):
     benchmark_scores = [dashboard_data.loc[dashboard_data['Symbol'] == b, 'Score'].values[0] for b in benchmarks]
     benchmark_score = max(benchmark_scores)
 
-    fig, ax = plt.subplots(figsize=(12, 17))
-    ax.axis('off')
-    ax.text(0.5, 0.98, f"Relative Strength Dashboard ({date.strftime('%Y-%m-%d')})", 
-            fontsize=16, fontweight='bold', ha='center', va='bottom', transform=ax.transAxes)
-
-    num_symbols = len(dashboard_data)
-    rows, columns = 20, 5
-    table_data = [[''] * columns for _ in range(rows)]
-
+    st.write(f"Relative Strength Dashboard ({date.strftime('%Y-%m-%d')})")
+    
+    cols = st.columns(5)
     for idx, row in dashboard_data.iterrows():
-        col = idx % columns
-        row_idx = idx // columns
+        col = cols[idx % 5]
         symbol = row['Symbol']
         score = int(row['Score'])
         rsi_value = row['RSI']
         rsi_str = 'N/A' if np.isnan(rsi_value) or np.isinf(rsi_value) else f"{rsi_value:.1f}"
-        table_data[row_idx][col] = f"{symbol}: {score}\nRSI: {rsi_str}"
+        
+        color = 'yellow' if symbol in benchmarks else \
+                'lightgreen' if score > 10 and score > benchmark_score else \
+                'lightgray' if score > 0 and score <= benchmark_score else \
+                'lightcoral' if score <= 0 and score <= benchmark_score else \
+                'white'
+        
+        text_color = 'red' if not np.isnan(rsi_value) and not np.isinf(rsi_value) and rsi_value > 70 else \
+                     'blue' if not np.isnan(rsi_value) and not np.isinf(rsi_value) and rsi_value < 30 else \
+                     'black'
+        
+        if col.button(f"{symbol}: {score}\nRSI: {rsi_str}", key=f"{symbol}_{date}"):
+            st.session_state.selected_symbol = symbol
 
-    table = ax.table(cellText=table_data, cellLoc='center', loc='center', bbox=[0, 0.02, 1, 0.95])
-    table.auto_set_font_size(False)
-    table.set_fontsize(16)
-    table.scale(1, 1.5)
-
-    for (row, col), cell in table.get_celld().items():
-        idx = row * columns + col
-        if idx < num_symbols:
-            symbol = dashboard_data.iloc[idx]['Symbol']
-            score = int(dashboard_data.iloc[idx]['Score'])
-            rsi_value = dashboard_data.iloc[idx]['RSI']
-            
-            if symbol in benchmarks:
-                cell.set_facecolor('yellow')
-            elif score > 10 and score > benchmark_score:
-                cell.set_facecolor('lightgreen')
-            elif score > 0 and score <= benchmark_score:
-                cell.set_facecolor('lightgray')
-            elif score <= 0 and score <= benchmark_score:
-                cell.set_facecolor('lightcoral')
-            else:
-                cell.set_facecolor('white')
-            
-            text_obj = cell.get_text()
-            rsi_str = 'N/A' if np.isnan(rsi_value) or np.isinf(rsi_value) else f"{rsi_value:.1f}"
-            text_obj.set_text(f"{symbol}: {score}\nRSI: {rsi_str}")
-            
-            if not np.isnan(rsi_value) and not np.isinf(rsi_value):
-                if rsi_value > 70:
-                    text_obj.set_color('red')
-                elif rsi_value < 30:
-                    text_obj.set_color('blue')
-                else:
-                    text_obj.set_color('black')
-            else:
-                text_obj.set_color('black')
-
-    plt.tight_layout(pad=1.0)
+def create_candlestick_chart(symbol_data, symbol, days=100):
+    df = symbol_data.tail(days)
+    fig = make_subplots(rows=2, cols=1, shared_xaxes=True, 
+                        vertical_spacing=0.03, subplot_titles=(symbol, 'Volume'),
+                        row_width=[0.7, 0.3])
+    
+    fig.add_trace(go.Candlestick(x=df.index, open=df['Open'], high=df['High'],
+                                 low=df['Low'], close=df['Close'], name='Price'),
+                  row=1, col=1)
+    
+    fig.add_trace(go.Bar(x=df.index, y=df['Volume'], name='Volume'), row=2, col=1)
+    
+    fig.update_layout(height=600, width=800, title_text=f"{symbol} - Last {days} Days",
+                      showlegend=False, xaxis_rangeslider_visible=False)
+    
     return fig
 
 def get_previous_trading_day(data, current_date, days_ago):
@@ -207,47 +173,20 @@ current_date = data.index[-1]
 previous_date = get_previous_trading_day(data['Close'], current_date, compare_days)
 
 if previous_date is not None:
-    # Calculate relative strength scores for the current date and the comparison date
     rs_scores_current = calculate_relative_strength(data['Close'], window=window, date=current_date)
     rs_scores_previous = calculate_relative_strength(data['Close'], window=window, date=previous_date)
 
-    # Create two columns for side-by-side display
     col1, col2 = st.columns(2)
 
-    # Display the current day dashboard in the first column
     with col1:
-        current_dashboard = create_dashboard(data['Close'], rs_scores_current, current_date, benchmarks)
-        st.pyplot(current_dashboard)
+        create_dashboard(data, rs_scores_current, current_date, benchmarks)
 
-    # Display the previous trading day dashboard in the second column
     with col2:
-        previous_dashboard = create_dashboard(data['Close'], rs_scores_previous, previous_date, benchmarks)
-        st.pyplot(previous_dashboard)
+        create_dashboard(data, rs_scores_previous, previous_date, benchmarks)
 
-    # New function to create candlestick chart
-    def create_candlestick_chart(symbol_data, symbol, days=100):
-        df = symbol_data.tail(days)
-        fig = make_subplots(rows=2, cols=1, shared_xaxes=True, 
-                            vertical_spacing=0.03, subplot_titles=(symbol, 'Volume'),
-                            row_width=[0.7, 0.3])
-        
-        fig.add_trace(go.Candlestick(x=df.index, open=df['Open'], high=df['High'],
-                                     low=df['Low'], close=df['Close'], name='Price'),
-                      row=1, col=1)
-        
-        fig.add_trace(go.Bar(x=df.index, y=df['Volume'], name='Volume'), row=2, col=1)
-        
-        fig.update_layout(height=600, width=800, title_text=f"{symbol} - Last {days} Days",
-                          showlegend=False, xaxis_rangeslider_visible=False)
-        
-        return fig
-
-    # Add selectbox for symbol selection
-    selected_symbol = st.selectbox("Select a symbol to view candlestick chart:", symbols)
-
-    if selected_symbol:
-        symbol_data = data[selected_symbol]
-        candlestick_chart = create_candlestick_chart(symbol_data, selected_symbol)
+    if 'selected_symbol' in st.session_state and st.session_state.selected_symbol:
+        symbol_data = data[st.session_state.selected_symbol]
+        candlestick_chart = create_candlestick_chart(symbol_data, st.session_state.selected_symbol)
         st.plotly_chart(candlestick_chart)
 
 else:
