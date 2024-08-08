@@ -184,9 +184,11 @@ def get_previous_trading_day(data, current_date, days_ago):
         st.error(f"Not enough historical data to go back {days_ago} trading days.")
         return None
 
-# Add this new function after the existing functions
-
 def compare_top_stocks(current_data, previous_data, n=10):
+    # Ensure 'Score' column is numeric
+    current_data['Score'] = pd.to_numeric(current_data['Score'], errors='coerce')
+    previous_data['Score'] = pd.to_numeric(previous_data['Score'], errors='coerce')
+    
     current_top = current_data.nlargest(n, 'Score')
     previous_top = previous_data.nlargest(n, 'Score')
     
@@ -216,6 +218,10 @@ if previous_date is not None:
         'Symbol': rs_scores_previous.loc[previous_date].index,
         'Score': rs_scores_previous.loc[previous_date].values
     }).sort_values('Score', ascending=False).reset_index(drop=True)
+
+    # Ensure 'Score' column is numeric
+    dashboard_data_current['Score'] = pd.to_numeric(dashboard_data_current['Score'], errors='coerce')
+    dashboard_data_previous['Score'] = pd.to_numeric(dashboard_data_previous['Score'], errors='coerce')
 
     # Compare top stocks
     maintained, new_entries, dropped_out = compare_top_stocks(dashboard_data_current, dashboard_data_previous)
