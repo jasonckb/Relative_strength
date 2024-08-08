@@ -234,8 +234,26 @@ def get_previous_trading_day(data, current_date, days_ago):
 
 # Main execution
 current_date = data.index[-1]
-previous_date = get_
+previous_date = get_previous_trading_day(data['Close'], current_date, compare_days)
 
+if previous_date is not None:
+    rs_scores_current = calculate_relative_strength(data['Close'], window=window, date=current_date)
+    rs_scores_previous = calculate_relative_strength(data['Close'], window=window, date=previous_date)
+
+    signals_current = generate_signals(data, current_date)
+    signals_previous = generate_signals(data, previous_date)
+
+    col1, col2 = st.columns(2)
+
+    with col1:
+        current_dashboard = create_dashboard(data, rs_scores_current, current_date, benchmarks, signals_current)
+        st.pyplot(current_dashboard)
+
+    with col2:
+        previous_dashboard = create_dashboard(data, rs_scores_previous, previous_date, benchmarks, signals_previous)
+        st.pyplot(previous_dashboard)
+else:
+    st.error("Unable to create comparison dashboard due to insufficient historical data.")
 
 
 
