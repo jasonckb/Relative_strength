@@ -103,27 +103,15 @@ def generate_signals(data, date):
             
             allow_distance = 0.5 * atr.iloc[-1]
             
-            last_close = close.iloc[-1]
-            last_low = low.iloc[-1]
-            last_high = high.iloc[-1]
-            last_ema_short = ema_short.iloc[-1]
-            last_ema_long = ema_long.iloc[-1]
+            buy_prep = (low < ema_short) & (low >= ema_long - allow_distance) & (low <= ema_long + allow_distance) & (ema_short >= ema_long)
+            buy_signal = buy_prep.shift(1) & (close > high.shift(1))
             
-            buy_condition = (last_low < last_ema_short and 
-                             last_low >= last_ema_long - allow_distance and 
-                             last_low <= last_ema_long + allow_distance and 
-                             last_ema_short >= last_ema_long and
-                             last_close >= high.iloc[-2])
+            short_prep = (high > ema_short) & (high >= ema_long - allow_distance) & (high <= ema_long + allow_distance) & (ema_short <= ema_long)
+            short_signal = short_prep.shift(1) & (close < low.shift(1))
             
-            sell_condition = (last_high > last_ema_short and 
-                              last_high >= last_ema_long - allow_distance and 
-                              last_high <= last_ema_long + allow_distance and 
-                              last_ema_short <= last_ema_long and
-                              last_close <= low.iloc[-2])
-            
-            if buy_condition:
+            if buy_signal.iloc[-1]:
                 signals[symbol] = 'buy'
-            elif sell_condition:
+            elif short_signal.iloc[-1]:
                 signals[symbol] = 'sell'
             else:
                 signals[symbol] = 'neutral'
@@ -228,7 +216,7 @@ def create_dashboard(data, rs_scores, date, benchmarks, signals):
             
             text_obj = cell.get_text()
             rsi_str = 'N/A' if np.isnan(rsi_value) or np.isinf(rsi_value) else f"{rsi_value:.1f}"
-            signal_arrow = '🔼' if signal == 'buy' else '🔽' if signal == 'sell' else ''
+            signal_arrow = '▲' if signal == 'buy' else '▼' if signal == 'sell' else ''
             text_obj.set_text(f"{symbol}: {score} {signal_arrow}\nRSI: {rsi_str}")
             
             if not np.isnan(rsi_value) and not np.isinf(rsi_value):
@@ -243,6 +231,16 @@ def create_dashboard(data, rs_scores, date, benchmarks, signals):
 
     plt.tight_layout(pad=1.0)
     return fig
+
+def compare_top_stocks(current_data, previous_data, n=10):
+    current_top = current_data.nlargest(n, 'Score')
+    previous_top = previous_data.nlargest(n, 'Score')
+    
+    maintained = set(current_top['Symbol']) & set(previous_top['Symbol'])
+    new_entries = set(current_top['Symbol']) - set(previous_top['Symbol'])
+    dropped_out = set(previous_top['Symbol']) - set(current_top['Symbol'])
+    
+    return maintained, new_entries, dropped_out
 
 def get_previous_trading_day(data, current_date, days_ago):
     date_index = data.index.get_loc(current_date)
@@ -264,13 +262,41 @@ if previous_date is not None:
         signals_current = generate_signals(data, current_date)
         signals_previous = generate_signals(data, previous_date)
 
-        col1, col2 = st.columns(2)
+        # Create dashboard data for comparison
+        dashboard_data_current = pd.DataFrame({
+            'Symbol': rs_scores_current.loc[current_date].index,
+            'Score': rs_scores_current.loc[current_date].values
+        }).sort_values('Score', ascending=False).reset_index(drop=True)
 
+        dashboard_data_previous = pd.DataFrame({
+            'Symbol': rs_scores_previous.loc[previous_date].index,
+            'Score': rs_scores_previous.loc[previous_date].values
+        }).sort_values('Score', ascending=False).reset_index(drop=True)
+
+        # Compare top stocks
+        maintained, new_entries, dropped_out = compare_top_stocks(dashboard_data_current, dashboard_data_previous)
+
+        # Display top stocks comparison
+        st.header("Top Stocks")
+        col1, col2, col3 = st.columns(3)
         with col1:
+            st.subheader("Maintained in Top 10")
+            st.write(", ".join(maintained))
+        with col2:
+            st.subheader("New in Top 10")
+            st.write(", ".join(new_entries))
+        with col3:
+            st.subheader("Dropped from Top 10")
+            st.write(", ".join(dropped_out))
+
+        # Create two columns for side-by-side display
+        dashboard_col1, dashboard_col2 = st.columns(2)
+
+        with dashboard_col1:
             current_dashboard = create_dashboard(data, rs_scores_current, current_date, benchmarks, signals_current)
             st.pyplot(current_dashboard)
 
-        with col2:
+        with dashboard_col2:
             previous_dashboard = create_dashboard(data, rs_scores_previous, previous_date, benchmarks, signals_previous)
             st.pyplot(previous_dashboard)
 
@@ -278,15 +304,5 @@ if previous_date is not None:
         st.error(f"An error occurred while generating the dashboard: {str(e)}")
 else:
     st.error("Unable to create comparison dashboard due to insufficient historical data.")
-
-# Add any additional Streamlit components or information display here
-st.write("Dashboard generated successfully!")
-
-
-
-
-
-
-
 
 
