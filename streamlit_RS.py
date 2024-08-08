@@ -56,20 +56,62 @@ else:  # HK Stock
     symbols = hk_symbols
     benchmarks = ['^HSI']
 
-# Download data
+# New functions for EMA and ATR calculations
+def calculate_ema(data, period):
+    return data.ewm(span=period, adjust=False).mean()
+
+def calculate_atr(data, period):
+    high = data['High']
+    low = data['Low']
+    close = data['Close'].shift(1)
+    tr = pd.concat([high - low, (high - close).abs(), (low - close).abs()], axis=1).max(axis=1)
+    return tr.rolling(window=period).mean()
+
+# Modified download_data function
 @st.cache_data
 def download_data(symbols):
     hk_tz = pytz.timezone('Asia/Hong_Kong')
     end_date = datetime.now(hk_tz)
     start_date = end_date - timedelta(days=365)
     end_date += timedelta(days=1)
-    data = yf.download(symbols, start=start_date, end=end_date, progress=False)['Close']
+    data = yf.download(symbols, start=start_date, end=end_date, progress=False)
     return data
 
 data = download_data(symbols)
 
 # Print the last available date for debugging
 st.write(f"Last available date in the data: {data.index[-1]}")
+
+# New function for signal generation
+def generate_signals(data, date):
+    signals = {}
+    for symbol in data.columns.levels[1]:
+        symbol_data = data.loc[:date, (slice(None), symbol)]
+        
+        close = symbol_data['Close']
+        low = symbol_data['Low']
+        high = symbol_data['High']
+        
+        ema_short = calculate_ema(close, 5)
+        ema_long = calculate_ema(close, 25)
+        atr = calculate_atr(symbol_data, 14)
+        
+        allow_distance = 0.5 * atr
+        
+        buy_prep = (low < ema_short) & (low >= ema_long - allow_distance) & (low <= ema_long + allow_distance) & (ema_short >= ema_long)
+        buy_signal = buy_prep.shift(1) & (close >= high.shift(1))
+        
+        short_prep = (high > ema_short) & (high >= ema_long - allow_distance) & (high <= ema_long + allow_distance) & (ema_short <= ema_long)
+        short_signal = short_prep.shift(1) & (close <= low.shift(1))
+        
+        if buy_signal.iloc[-1]:
+            signals[symbol] = 'buy'
+        elif short_signal.iloc[-1]:
+            signals[symbol] = 'sell'
+        else:
+            signals[symbol] = 'neutral'
+    
+    return signals
 
 def calculate_relative_strength(data, window=200, date=None):
     if date is None:
@@ -95,10 +137,11 @@ def calculate_rsi(data, window=14):
     rsi = 100 - (100 / (1 + rs))
     return rsi
 
-def create_dashboard(data, rs_scores, date, benchmarks):
+# Modified create_dashboard function
+def create_dashboard(data, rs_scores, date, benchmarks, signals):
     rsi_values = {}
-    for symbol in data.columns:
-        symbol_data = data[symbol].loc[:date].dropna()
+    for symbol in data.columns.levels[1]:
+        symbol_data = data.loc[:date, ('Close', symbol)].dropna()
         if len(symbol_data) >= 14:
             rsi_series = calculate_rsi(symbol_data)
             rsi_values[symbol] = rsi_series.iloc[-1]
@@ -109,7 +152,8 @@ def create_dashboard(data, rs_scores, date, benchmarks):
     dashboard_data = pd.DataFrame({
         'Symbol': latest_scores.index,
         'Score': latest_scores.values,
-        'RSI': [rsi_values[symbol] for symbol in latest_scores.index]
+        'RSI': [rsi_values[symbol] for symbol in latest_scores.index],
+        'Signal': [signals.get(symbol, 'neutral') for symbol in latest_scores.index]
     })
 
     dashboard_data = dashboard_data.reset_index(drop=True)
@@ -133,8 +177,10 @@ def create_dashboard(data, rs_scores, date, benchmarks):
         symbol = row['Symbol']
         score = int(row['Score'])
         rsi_value = row['RSI']
+        signal = row['Signal']
+        signal_arrow = '🔼' if signal == 'buy' else '🔽' if signal == 'sell' else ''
         rsi_str = 'N/A' if np.isnan(rsi_value) or np.isinf(rsi_value) else f"{rsi_value:.1f}"
-        table_data[row_idx][col] = f"{symbol}: {score}\nRSI: {rsi_str}"
+        table_data[row_idx][col] = f"{symbol}: {score} {signal_arrow}\nRSI: {rsi_str}"
 
     table = ax.table(cellText=table_data, cellLoc='center', loc='center', bbox=[0, 0.02, 1, 0.95])
     table.auto_set_font_size(False)
@@ -147,6 +193,7 @@ def create_dashboard(data, rs_scores, date, benchmarks):
             symbol = dashboard_data.iloc[idx]['Symbol']
             score = int(dashboard_data.iloc[idx]['Score'])
             rsi_value = dashboard_data.iloc[idx]['RSI']
+            signal = dashboard_data.iloc[idx]['Signal']
             
             if symbol in benchmarks:
                 cell.set_facecolor('yellow')
@@ -161,7 +208,8 @@ def create_dashboard(data, rs_scores, date, benchmarks):
             
             text_obj = cell.get_text()
             rsi_str = 'N/A' if np.isnan(rsi_value) or np.isinf(rsi_value) else f"{rsi_value:.1f}"
-            text_obj.set_text(f"{symbol}: {score}\nRSI: {rsi_str}")
+            signal_arrow = '🔼' if signal == 'buy' else '🔽' if signal == 'sell' else ''
+            text_obj.set_text(f"{symbol}: {score} {signal_arrow}\nRSI: {rsi_str}")
             
             if not np.isnan(rsi_value) and not np.isinf(rsi_value):
                 if rsi_value > 70:
@@ -184,75 +232,9 @@ def get_previous_trading_day(data, current_date, days_ago):
         st.error(f"Not enough historical data to go back {days_ago} trading days.")
         return None
 
-def compare_top_stocks(current_data, previous_data, n=10):
-    # Ensure 'Score' column is numeric
-    current_data['Score'] = pd.to_numeric(current_data['Score'], errors='coerce')
-    previous_data['Score'] = pd.to_numeric(previous_data['Score'], errors='coerce')
-    
-    current_top = current_data.nlargest(n, 'Score')
-    previous_top = previous_data.nlargest(n, 'Score')
-    
-    maintained = set(current_top['Symbol']) & set(previous_top['Symbol'])
-    new_entries = set(current_top['Symbol']) - set(previous_top['Symbol'])
-    dropped_out = set(previous_top['Symbol']) - set(current_top['Symbol'])
-    
-    return maintained, new_entries, dropped_out
-
-# Modify the main execution part of the script
-
 # Main execution
 current_date = data.index[-1]
-previous_date = get_previous_trading_day(data, current_date, compare_days)
-
-if previous_date is not None:
-    rs_scores_current = calculate_relative_strength(data, window=window, date=current_date)
-    rs_scores_previous = calculate_relative_strength(data, window=window, date=previous_date)
-
-    # Create dashboard data for comparison
-    dashboard_data_current = pd.DataFrame({
-        'Symbol': rs_scores_current.loc[current_date].index,
-        'Score': rs_scores_current.loc[current_date].values
-    }).sort_values('Score', ascending=False).reset_index(drop=True)
-
-    dashboard_data_previous = pd.DataFrame({
-        'Symbol': rs_scores_previous.loc[previous_date].index,
-        'Score': rs_scores_previous.loc[previous_date].values
-    }).sort_values('Score', ascending=False).reset_index(drop=True)
-
-    # Ensure 'Score' column is numeric
-    dashboard_data_current['Score'] = pd.to_numeric(dashboard_data_current['Score'], errors='coerce')
-    dashboard_data_previous['Score'] = pd.to_numeric(dashboard_data_previous['Score'], errors='coerce')
-
-    # Compare top stocks
-    maintained, new_entries, dropped_out = compare_top_stocks(dashboard_data_current, dashboard_data_previous)
-
-    # Display top stocks comparison
-    st.header("Top Stocks")
-    col1, col2, col3 = st.columns(3)
-    with col1:
-        st.subheader("Maintained in Top 10")
-        st.write(", ".join(maintained))
-    with col2:
-        st.subheader("New in Top 10")
-        st.write(", ".join(new_entries))
-    with col3:
-        st.subheader("Dropped from Top 10")
-        st.write(", ".join(dropped_out))
-
-    # Create two columns for side-by-side display
-    dashboard_col1, dashboard_col2 = st.columns(2)
-
-    # Display the current day dashboard in the first column
-    with dashboard_col1:
-        current_dashboard = create_dashboard(data, rs_scores_current, current_date, benchmarks)
-        st.pyplot(current_dashboard)
-
-    # Display the previous trading day dashboard in the second column
-    with dashboard_col2:
-        previous_dashboard = create_dashboard(data, rs_scores_previous, previous_date, benchmarks)
-        st.pyplot(previous_dashboard)
-else:
-    st.error("Unable to create comparison dashboard due to insufficient historical data.")
+previous_date = get_
 
 
 
