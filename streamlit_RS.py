@@ -56,18 +56,7 @@ else:  # HK Stock
     symbols = hk_symbols
     benchmarks = ['^HSI']
 
-# New functions for EMA and ATR calculations
-def calculate_ema(data, period):
-    return data.ewm(span=period, adjust=False).mean()
-
-def calculate_atr(data, period):
-    high = data['High']
-    low = data['Low']
-    close = data['Close'].shift(1)
-    tr = pd.concat([high - low, (high - close).abs(), (low - close).abs()], axis=1).max(axis=1)
-    return tr.rolling(window=period).mean()
-
-# Modified download_data function
+# Download data
 @st.cache_data
 def download_data(symbols):
     hk_tz = pytz.timezone('Asia/Hong_Kong')
@@ -82,35 +71,8 @@ data = download_data(symbols)
 # Print the last available date for debugging
 st.write(f"Last available date in the data: {data.index[-1]}")
 
-def generate_signals(data, date):
-    signals = {}
-    for symbol in data.columns.levels[1]:
-        symbol_data = data.loc[:date, (slice(None), symbol)].droplevel(1, axis=1)
-        
-        close = symbol_data['Close']
-        low = symbol_data['Low']
-        high = symbol_data['High']
-        
-        ema_short = calculate_ema(close, 5)
-        ema_long = calculate_ema(close, 25)
-        atr = calculate_atr(symbol_data, 14)
-        
-        allow_distance = 0.5 * atr
-        
-        buy_prep = (low < ema_short) & (low >= ema_long - allow_distance) & (low <= ema_long + allow_distance) & (ema_short >= ema_long)
-        buy_signal = buy_prep.shift(1) & (close >= high.shift(1))
-        
-        short_prep = (high > ema_short) & (high >= ema_long - allow_distance) & (high <= ema_long + allow_distance) & (ema_short <= ema_long)
-        short_signal = short_prep.shift(1) & (close <= low.shift(1))
-        
-        if buy_signal.iloc[-1]:
-            signals[symbol] = 'buy'
-        elif short_signal.iloc[-1]:
-            signals[symbol] = 'sell'
-        else:
-            signals[symbol] = 'neutral'
-    
-    return signals
+def calculate_ema(data, period):
+    return data.ewm(span=period, adjust=False).mean()
 
 def calculate_atr(data, period):
     high = data['High']
@@ -121,12 +83,56 @@ def calculate_atr(data, period):
                        'lc': (low - close).abs()}).max(axis=1)
     return tr.rolling(window=period).mean()
 
-def calculate_ema(data, period):
-    return data.ewm(span=period, adjust=False).mean()
-
-# In the main execution part, modify the data passed to generate_signals:
-signals_current = generate_signals(data, current_date)
-signals_previous = generate_signals(data, previous_date)
+def generate_signals(data, date):
+    signals = {}
+    for symbol in data.columns.levels[1]:
+        try:
+            symbol_data = data.loc[:date, (slice(None), symbol)].droplevel(1, axis=1)
+            
+            if len(symbol_data) < 14:  # Ensure we have enough data
+                signals[symbol] = 'insufficient data'
+                continue
+            
+            close = symbol_data['Close']
+            low = symbol_data['Low']
+            high = symbol_data['High']
+            
+            ema_short = calculate_ema(close, 5)
+            ema_long = calculate_ema(close, 25)
+            atr = calculate_atr(symbol_data, 14)
+            
+            allow_distance = 0.5 * atr.iloc[-1]
+            
+            last_close = close.iloc[-1]
+            last_low = low.iloc[-1]
+            last_high = high.iloc[-1]
+            last_ema_short = ema_short.iloc[-1]
+            last_ema_long = ema_long.iloc[-1]
+            
+            buy_condition = (last_low < last_ema_short and 
+                             last_low >= last_ema_long - allow_distance and 
+                             last_low <= last_ema_long + allow_distance and 
+                             last_ema_short >= last_ema_long and
+                             last_close >= high.iloc[-2])
+            
+            sell_condition = (last_high > last_ema_short and 
+                              last_high >= last_ema_long - allow_distance and 
+                              last_high <= last_ema_long + allow_distance and 
+                              last_ema_short <= last_ema_long and
+                              last_close <= low.iloc[-2])
+            
+            if buy_condition:
+                signals[symbol] = 'buy'
+            elif sell_condition:
+                signals[symbol] = 'sell'
+            else:
+                signals[symbol] = 'neutral'
+        
+        except Exception as e:
+            print(f"Error processing {symbol}: {str(e)}")
+            signals[symbol] = 'error'
+    
+    return signals
 
 def calculate_relative_strength(data, window=200, date=None):
     if date is None:
@@ -152,7 +158,6 @@ def calculate_rsi(data, window=14):
     rsi = 100 - (100 / (1 + rs))
     return rsi
 
-# Modified create_dashboard function
 def create_dashboard(data, rs_scores, date, benchmarks, signals):
     rsi_values = {}
     for symbol in data.columns.levels[1]:
@@ -249,26 +254,33 @@ def get_previous_trading_day(data, current_date, days_ago):
 
 # Main execution
 current_date = data.index[-1]
-previous_date = get_previous_trading_day(data['Close'], current_date, compare_days)
+previous_date = get_previous_trading_day(data, current_date, compare_days)
 
 if previous_date is not None:
-    rs_scores_current = calculate_relative_strength(data['Close'], window=window, date=current_date)
-    rs_scores_previous = calculate_relative_strength(data['Close'], window=window, date=previous_date)
+    try:
+        rs_scores_current = calculate_relative_strength(data['Close'], window=window, date=current_date)
+        rs_scores_previous = calculate_relative_strength(data['Close'], window=window, date=previous_date)
 
-    signals_current = generate_signals(data, current_date)
-    signals_previous = generate_signals(data, previous_date)
+        signals_current = generate_signals(data, current_date)
+        signals_previous = generate_signals(data, previous_date)
 
-    col1, col2 = st.columns(2)
+        col1, col2 = st.columns(2)
 
-    with col1:
-        current_dashboard = create_dashboard(data, rs_scores_current, current_date, benchmarks, signals_current)
-        st.pyplot(current_dashboard)
+        with col1:
+            current_dashboard = create_dashboard(data, rs_scores_current, current_date, benchmarks, signals_current)
+            st.pyplot(current_dashboard)
 
-    with col2:
-        previous_dashboard = create_dashboard(data, rs_scores_previous, previous_date, benchmarks, signals_previous)
-        st.pyplot(previous_dashboard)
+        with col2:
+            previous_dashboard = create_dashboard(data, rs_scores_previous, previous_date, benchmarks, signals_previous)
+            st.pyplot(previous_dashboard)
+
+    except Exception as e:
+        st.error(f"An error occurred while generating the dashboard: {str(e)}")
 else:
     st.error("Unable to create comparison dashboard due to insufficient historical data.")
+
+# Add any additional Streamlit components or information display here
+st.write("Dashboard generated successfully!")
 
 
 
