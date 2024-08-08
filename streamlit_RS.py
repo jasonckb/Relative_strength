@@ -82,7 +82,6 @@ data = download_data(symbols)
 # Print the last available date for debugging
 st.write(f"Last available date in the data: {data.index[-1]}")
 
-# New function for signal generation
 def generate_signals(data, date):
     signals = {}
     for symbol in data.columns.levels[1]:
@@ -112,6 +111,18 @@ def generate_signals(data, date):
             signals[symbol] = 'neutral'
     
     return signals
+
+# Also, update the calculate_atr function to handle multi-index DataFrame
+def calculate_atr(data, period):
+    high = data['High']
+    low = data['Low']
+    close = data['Close'].shift(1)
+    tr = pd.concat([high - low, (high - close).abs(), (low - close).abs()], axis=1).max(axis=1)
+    return tr.rolling(window=period).mean()
+
+# And update the calculate_ema function
+def calculate_ema(data, period):
+    return data.ewm(span=period, adjust=False).mean()
 
 def calculate_relative_strength(data, window=200, date=None):
     if date is None:
