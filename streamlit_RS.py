@@ -85,7 +85,7 @@ st.write(f"Last available date in the data: {data.index[-1]}")
 def generate_signals(data, date):
     signals = {}
     for symbol in data.columns.levels[1]:
-        symbol_data = data.loc[:date, (slice(None), symbol)]
+        symbol_data = data.loc[:date, (slice(None), symbol)].droplevel(1, axis=1)
         
         close = symbol_data['Close']
         low = symbol_data['Low']
@@ -112,17 +112,21 @@ def generate_signals(data, date):
     
     return signals
 
-# Also, update the calculate_atr function to handle multi-index DataFrame
 def calculate_atr(data, period):
     high = data['High']
     low = data['Low']
     close = data['Close'].shift(1)
-    tr = pd.concat([high - low, (high - close).abs(), (low - close).abs()], axis=1).max(axis=1)
+    tr = pd.DataFrame({'hl': high - low, 
+                       'hc': (high - close).abs(), 
+                       'lc': (low - close).abs()}).max(axis=1)
     return tr.rolling(window=period).mean()
 
-# And update the calculate_ema function
 def calculate_ema(data, period):
     return data.ewm(span=period, adjust=False).mean()
+
+# In the main execution part, modify the data passed to generate_signals:
+signals_current = generate_signals(data, current_date)
+signals_previous = generate_signals(data, previous_date)
 
 def calculate_relative_strength(data, window=200, date=None):
     if date is None:
