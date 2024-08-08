@@ -198,8 +198,6 @@ def compare_top_stocks(current_data, previous_data, n=10):
     
     return maintained, new_entries, dropped_out
 
-# Modify the main execution part of the script
-
 # Main execution
 current_date = data.index[-1]
 previous_date = get_previous_trading_day(data, current_date, compare_days)
@@ -253,10 +251,6 @@ if previous_date is not None:
         st.pyplot(previous_dashboard)
 else:
     st.error("Unable to create comparison dashboard due to insufficient historical data.")
-
-
-
-
 
 
 
