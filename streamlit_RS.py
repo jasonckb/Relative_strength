@@ -291,12 +291,12 @@ if previous_date is not None:
         dashboard_col1, dashboard_col2 = st.columns(2)
 
         with dashboard_col1:
-            st.subheader(f"Current Dashboard ({current_date.strftime('%Y-%m-%d')})")
+            #st.subheader(f"Current Dashboard ({current_date.strftime('%Y-%m-%d')})")
             current_dashboard = create_dashboard(data, rs_scores_current, current_date, benchmarks, signals_current)
             st.pyplot(current_dashboard)
 
         with dashboard_col2:
-            st.subheader(f"Previous Dashboard ({previous_date.strftime('%Y-%m-%d')})")
+            #st.subheader(f"Previous Dashboard ({previous_date.strftime('%Y-%m-%d')})")
             previous_dashboard = create_dashboard(data, rs_scores_previous, previous_date, benchmarks, signals_previous)
             st.pyplot(previous_dashboard)
 
