@@ -287,10 +287,10 @@ try:
     comparison_data = []
     for period, result in comparisons.items():
         comparison_data.append({
-            'Period': f"{period} days ago",
-            'Maintained': ", ".join(result['maintained']),
-            'New Entries': ", ".join(result['new_entries']),
-            'Dropped Out': ", ".join(result['dropped_out'])
+            'Comparison Period': f"{period} days ago",
+            'Maintained in Top 10': ", ".join(result['maintained']),
+            'New Entries in Top 10': ", ".join(result['new_entries']),
+            'Dropped Out from Top 10': ", ".join(result['dropped_out'])
         })
     
     comparison_df = pd.DataFrame(comparison_data)
