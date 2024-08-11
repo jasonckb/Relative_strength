@@ -248,67 +248,80 @@ def compare_top_stocks(current_data, previous_data, n=10):
     
     return maintained, new_entries, dropped_out
 
+def multi_period_comparison(data, current_date, periods=[2, 5, 10], custom_period=None):
+    comparisons = {}
+    for period in periods + ([custom_period] if custom_period else []):
+        previous_date = get_previous_trading_day(data, current_date, period)
+        if previous_date is not None:
+            rs_scores_current = calculate_relative_strength(data['Close'], window=window, date=current_date)
+            rs_scores_previous = calculate_relative_strength(data['Close'], window=window, date=previous_date)
+            
+            dashboard_data_current = pd.DataFrame({
+                'Symbol': rs_scores_current.loc[current_date].index,
+                'Score': rs_scores_current.loc[current_date].values.astype(float)
+            }).sort_values('Score', ascending=False).reset_index(drop=True)
+            
+            dashboard_data_previous = pd.DataFrame({
+                'Symbol': rs_scores_previous.loc[previous_date].index,
+                'Score': rs_scores_previous.loc[previous_date].values.astype(float)
+            }).sort_values('Score', ascending=False).reset_index(drop=True)
+            
+            maintained, new_entries, dropped_out = compare_top_stocks(dashboard_data_current, dashboard_data_previous)
+            comparisons[period] = {
+                'maintained': maintained,
+                'new_entries': new_entries,
+                'dropped_out': dropped_out
+            }
+    return comparisons
+
 # Main execution
 current_date = data.index[-1]
-previous_date = get_previous_trading_day(data, current_date, compare_days)
 
-if previous_date is not None:
-    try:
-        rs_scores_current = calculate_relative_strength(data['Close'], window=window, date=current_date)
+try:
+    comparisons = multi_period_comparison(data, current_date, periods=[2, 5, 10], custom_period=compare_days)
+    
+    # Display top stocks comparison
+    st.header("Top Stocks Comparison")
+    
+    # Create a DataFrame for the comparison table
+    comparison_data = []
+    for period, result in comparisons.items():
+        comparison_data.append({
+            'Period': f"{period} days ago",
+            'Maintained': ", ".join(result['maintained']),
+            'New Entries': ", ".join(result['new_entries']),
+            'Dropped Out': ", ".join(result['dropped_out'])
+        })
+    
+    comparison_df = pd.DataFrame(comparison_data)
+    st.table(comparison_df)
+
+    rs_scores_current = calculate_relative_strength(data['Close'], window=window, date=current_date)
+    signals_current = generate_signals(data, current_date)
+
+    previous_date = get_previous_trading_day(data, current_date, compare_days)
+    if previous_date is not None:
         rs_scores_previous = calculate_relative_strength(data['Close'], window=window, date=previous_date)
-
-        signals_current = generate_signals(data, current_date)
         signals_previous = generate_signals(data, previous_date)
-
-        # Create dashboard data for comparison
-        dashboard_data_current = pd.DataFrame({
-            'Symbol': rs_scores_current.loc[current_date].index,
-            'Score': rs_scores_current.loc[current_date].values.astype(float)  # Ensure float type
-        }).sort_values('Score', ascending=False).reset_index(drop=True)
-
-        dashboard_data_previous = pd.DataFrame({
-            'Symbol': rs_scores_previous.loc[previous_date].index,
-            'Score': rs_scores_previous.loc[previous_date].values.astype(float)  # Ensure float type
-        }).sort_values('Score', ascending=False).reset_index(drop=True)
-
-        # Compare top stocks
-        maintained, new_entries, dropped_out = compare_top_stocks(dashboard_data_current, dashboard_data_previous)
-
-        # Display top stocks comparison
-        st.header("Top Stocks Comparison")
-        col1, col2, col3 = st.columns(3)
-        with col1:
-            st.subheader("Maintained in Top 10")
-            st.write(", ".join(maintained))
-        with col2:
-            st.subheader("New in Top 10")
-            st.write(", ".join(new_entries))
-        with col3:
-            st.subheader("Dropped from Top 10")
-            st.write(", ".join(dropped_out))
 
         # Create two columns for side-by-side display
         dashboard_col1, dashboard_col2 = st.columns(2)
 
         with dashboard_col1:
-            #st.subheader(f"Current Dashboard ({current_date.strftime('%Y-%m-%d')})")
             current_dashboard = create_dashboard(data, rs_scores_current, current_date, benchmarks, signals_current)
             st.pyplot(current_dashboard)
 
         with dashboard_col2:
-            #st.subheader(f"Previous Dashboard ({previous_date.strftime('%Y-%m-%d')})")
             previous_dashboard = create_dashboard(data, rs_scores_previous, previous_date, benchmarks, signals_previous)
             st.pyplot(previous_dashboard)
+    else:
+        st.error("Unable to create comparison dashboard due to insufficient historical data.")
 
-    except Exception as e:
-        st.error(f"An error occurred while generating the dashboard: {str(e)}")
-else:
-    st.error("Unable to create comparison dashboard due to insufficient historical data.")
+except Exception as e:
+    st.error(f"An error occurred while generating the dashboard: {str(e)}")
 
 # Add any additional Streamlit components or information display here
 st.write("Dashboard generated successfully!")
-
-
 
 
 
