@@ -49,12 +49,14 @@ if st.sidebar.button('Refresh Data'):
     st.cache_data.clear()
 
 # Select the appropriate symbol list and benchmarks based on the user's choice
-if market == 'US Stock':
-    symbols = us_symbols
-    benchmarks = ['^NDX', '^GSPC']
-else:  # HK Stock
+if market == 'HK Stock':
     symbols = hk_symbols
     benchmarks = ['^HSI']
+    symbols = us_symbols
+    benchmarks = ['^NDX', '^GSPC']
+else:  # US Stock
+    symbols = us_symbols
+    benchmarks = ['^NDX', '^GSPC']
 
 # Download data
 @st.cache_data
@@ -120,7 +122,7 @@ def generate_signals(data, date):
     
     return signals
 
-def calculate_relative_strength(data, window=200, date=None):
+def calculate_relative_strength(data, window=10, date=None):
     if date is None:
         date = data.index[-1]
     rs_scores = pd.DataFrame(index=data.index, columns=data.columns)
