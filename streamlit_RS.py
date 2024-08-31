@@ -52,8 +52,6 @@ if st.sidebar.button('Refresh Data'):
 if market == 'HK Stock':
     symbols = hk_symbols
     benchmarks = ['^HSI']
-    symbols = us_symbols
-    benchmarks = ['^NDX', '^GSPC']
 else:  # US Stock
     symbols = us_symbols
     benchmarks = ['^NDX', '^GSPC']
