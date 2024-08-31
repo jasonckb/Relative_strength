@@ -40,8 +40,8 @@ hk_symbols = [
 # Sidebar for user input
 st.sidebar.title("Relative Strength Dashboard by Jason")
 st.sidebar.header('User Input')
-market = st.sidebar.radio('Select Market', ['US Stock', 'HK Stock'])
-window = st.sidebar.number_input('Moving Average Window for Relative Strength', min_value=1, max_value=365, value=200)
+market = st.sidebar.radio('Select Market', ['HK Stock','US Stock'])
+window = st.sidebar.number_input('Moving Average Window for Relative Strength', min_value=1, max_value=365, value=10)
 compare_days = st.sidebar.number_input('Compare N days ago', min_value=1, max_value=365, value=1)
 
 # Add a refresh button
